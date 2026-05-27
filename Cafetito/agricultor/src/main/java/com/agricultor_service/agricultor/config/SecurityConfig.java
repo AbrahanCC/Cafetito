@@ -3,7 +3,6 @@ package com.agricultor_service.agricultor.config;
 import com.agricultor_service.agricultor.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -34,21 +33,6 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/agricultor/catalogos/**")
                         .hasAnyAuthority("ROLE_1", "ROLE_2", "ROLE_3")
-
-                        .requestMatchers(HttpMethod.GET, "/api/agricultor")
-                        .hasAuthority("ROLE_1")
-
-                        .requestMatchers("/api/agricultor/transportes/**")
-                        .hasAuthority("ROLE_3")
-
-                        .requestMatchers("/api/agricultor/transportistas/**")
-                        .hasAuthority("ROLE_3")
-
-                        .requestMatchers("/api/agricultor/pesajes/**")
-                        .hasAuthority("ROLE_3")
-
-                        .requestMatchers("/api/agricultor/parcialidades/**")
-                        .hasAuthority("ROLE_3")
 
                         .requestMatchers("/api/agricultor/**")
                         .hasAuthority("ROLE_3")
