@@ -1,16 +1,15 @@
-<div class="page-container">
+<div class="container-fluid py-4">
 
   <div class="d-flex justify-content-between align-items-center mb-4">
 
     <div>
       <h2 class="fw-bold mb-1">Cuentas — Beneficio</h2>
-      <p class="text-muted mb-0">Apertura de cuentas para agricultores.</p>
       <p class="text-muted mb-0">
         Apertura, cierre y confirmación de cuentas.
       </p>
     </div>
 
-    <button class="btn btn-cafetito-table" (click)="nueva()">
+    <button class="btn btn-success" (click)="nueva()">
       + Nueva cuenta
     </button>
 
@@ -60,7 +59,6 @@
     {{ error }}
   </div>
 
-  <div class="card card-custom mb-4" *ngIf="showForm">
   <div class="card mb-3" *ngIf="showForm">
 
     <div class="card-body">
@@ -68,21 +66,9 @@
       <h5 class="fw-bold mb-3">Abrir nueva cuenta</h5>
 
       <form [formGroup]="form" (ngSubmit)="guardar()">
+
         <div class="row g-3">
 
-          <div class="col-md-4">
-            <label class="form-label">NIT Agricultor</label>
-            <input type="number" class="form-control" formControlName="nitAgricultor" placeholder="Ej. 123456789">
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label">Peso inicial</label>
-            <input type="number" step="0.01" class="form-control" formControlName="pesoTotal" placeholder="Ej. 100.5">
-          </div>
-
-          <div class="col-md-4">
-            <label class="form-label">Cantidad de parcialidades</label>
-            <input type="number" class="form-control" formControlName="cantidadParcialidades" placeholder="Ej. 3">
           <div class="col-md-6">
             <label class="form-label">ID/NIT Agricultor</label>
             <input
@@ -104,8 +90,6 @@
 
         </div>
 
-        <div class="mt-4">
-          <button type="submit" class="btn btn-cafetito-table me-2" [disabled]="form.invalid">
         <div class="mt-3">
 
           <button
@@ -115,22 +99,21 @@
             Crear cuenta
           </button>
 
-          <button type="button" class="btn btn-secondary" (click)="cancelar()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="cancelar()">
             Cancelar
           </button>
 
         </div>
+
       </form>
 
     </div>
 
   </div>
 
-  <div class="card card-custom">
-    <div class="card-body p-0">
-
-      <table class="table table-hover align-middle mb-0">
-        <thead>
   <div class="card shadow-sm">
 
     <div class="card-body p-0">
@@ -155,8 +138,6 @@
         </thead>
 
         <tbody>
-          <tr *ngIf="loading && cuentas.length === 0">
-            <td colspan="6" class="text-center py-4">
 
           <tr *ngIf="loading">
             <td colspan="12" class="text-center py-3">
@@ -165,7 +146,6 @@
           </tr>
 
           <tr *ngFor="let c of cuentas">
-            <td class="fw-semibold">{{ c.idCuenta }}</td>
 
             <td>{{ c.idCuenta }}</td>
 
@@ -182,7 +162,9 @@
             <td>{{ c.cantidadParcialidades || 0 }}</td>
 
             <td>
-              <span class="badge bg-success">{{ c.estado }}</span>
+              <span class="badge bg-success">
+                {{ c.estado }}
+              </span>
             </td>
 
             <td>{{ c.diferenciaTotal || 0 }}</td>
@@ -218,11 +200,11 @@
           </tr>
 
           <tr *ngIf="!loading && cuentas.length === 0">
-            <td colspan="6" class="text-center text-muted py-4">
             <td colspan="12" class="text-center text-muted py-3">
               Sin cuentas registradas
             </td>
           </tr>
+
         </tbody>
 
       </table>

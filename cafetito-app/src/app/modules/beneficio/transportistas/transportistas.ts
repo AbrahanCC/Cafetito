@@ -1,6 +1,5 @@
 ﻿import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { BeneficioService } from '../../../core/services/beneficio';
-import { Transportista } from '../../../core/models/models';
 
 @Component({
   standalone: false,
@@ -10,7 +9,7 @@ import { Transportista } from '../../../core/models/models';
 })
 export class TransportistasBeneficioComponent implements OnInit {
 
-  transportistas: Transportista[] = [];
+  transportistas: any[] = [];
   loading = false;
   error = '';
 
@@ -37,7 +36,10 @@ export class TransportistasBeneficioComponent implements OnInit {
       error: err => {
         this.transportistas = [];
         this.loading = false;
-        this.error = err?.error?.mensaje || err?.error?.error || 'No se pudieron cargar los transportistas.';
+        this.error =
+          err?.error?.mensaje ||
+          err?.error?.error ||
+          'No se pudieron cargar los transportistas.';
         this.cdr.detectChanges();
       }
     });
@@ -45,9 +47,5 @@ export class TransportistasBeneficioComponent implements OnInit {
 
   obtenerEstado(estado?: number): string {
     return estado === 1 ? 'Activo' : 'Inactivo';
-  }
-
-  obtenerDisponible(disponible?: boolean): string {
-    return disponible ? 'Sí' : 'No';
   }
 }

@@ -1,8 +1,69 @@
-<div class="container-fluid py-4"><h2 class="fw-bold mb-4">Transportes</h2>
-  <div class="card shadow-sm"><div class="card-body p-0">
-    <table class="table table-hover mb-0"><thead class="table-success">
-      <tr><th>Placa</th><th>Marca</th><th>Agricultor</th><th>Estado</th><th>Accion</th></tr>
-    </thead><tbody>
-      <tr *ngFor="let t of transportes"><td>{{t.placa}}</td><td>{{t.marca}}</td><td>{{t.agricultor?.nombre}}</td><td><span class="badge bg-success">{{t.estado}}</span></td>
-      <tr *ngIf="!loading && transportes.length===0"><td colspan="5" class="text-center text-muted py-3">Sin registros</td></tr>
-    </tbody></table></div></div></div>
+<div class="container-fluid py-4">
+
+  <h2 class="fw-bold mb-1">Transportes — Beneficio</h2>
+  <p class="text-muted mb-4">
+    Consulta de transportes registrados en tránsito.
+  </p>
+
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+
+      <table class="table table-hover mb-0">
+        <thead class="table-success">
+          <tr>
+            <th>Placa</th>
+            <th>Cuenta</th>
+            <th>Pesaje</th>
+            <th>Estado Transporte</th>
+            <th>Observación Transporte</th>
+            <th>Transportista</th>
+            <th>CUI</th>
+            <th>Peso Enviado</th>
+            <th>Fecha Recepción</th>
+          </tr>
+        </thead>
+
+        <tbody>
+
+          <tr *ngIf="loading">
+            <td colspan="9" class="text-center py-3">
+              Cargando transportes...
+            </td>
+          </tr>
+
+          <tr *ngFor="let t of transportes">
+            <td>{{ t.placaTransporte || '-' }}</td>
+            <td>{{ t.cuenta?.idCuenta || '-' }}</td>
+            <td>{{ t.idPesajeAgricultor || '-' }}</td>
+            <td>
+              <span
+                class="badge"
+                [class.bg-success]="t.estadoTransporte === 1"
+                [class.bg-secondary]="t.estadoTransporte !== 1">
+                {{ obtenerEstado(t.estadoTransporte) }}
+              </span>
+            </td>
+            <td>{{ t.observacionTransporte || '-' }}</td>
+            <td>{{ t.nombreTransportista || '-' }}</td>
+            <td>{{ t.cuiTransportista || '-' }}</td>
+            <td>{{ t.pesoEnviado || 0 }}</td>
+            <td>{{ t.fechaRecepcionParcialidad | date:'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+
+          <tr *ngIf="!loading && transportes.length === 0">
+            <td colspan="9" class="text-center text-muted py-3">
+              Sin transportes registrados
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+
+    </div>
+  </div>
+
+</div>

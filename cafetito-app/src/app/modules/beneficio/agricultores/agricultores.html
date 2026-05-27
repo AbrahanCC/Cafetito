@@ -1,7 +1,13 @@
 <div class="container-fluid py-4">
 
   <h2 class="fw-bold mb-1">Agricultores — Beneficio</h2>
-  <p class="text-muted mb-4">Consulta de agricultores registrados.</p>
+  <p class="text-muted mb-4">
+    Consulta de agricultores registrados.
+  </p>
+
+  <div class="alert alert-danger" *ngIf="error">
+    {{ error }}
+  </div>
 
   <div class="card shadow-sm">
     <div class="card-body p-0">
@@ -20,8 +26,11 @@
         </thead>
 
         <tbody>
+
           <tr *ngIf="loading">
-            <td colspan="7" class="text-center py-3">Cargando agricultores...</td>
+            <td colspan="7" class="text-center py-3">
+              Cargando agricultores...
+            </td>
           </tr>
 
           <tr *ngFor="let a of agricultores">
@@ -31,7 +40,10 @@
             <td>{{ a.direccion || '-' }}</td>
             <td>{{ a.telefono || '-' }}</td>
             <td>
-              <span class="badge" [class.bg-success]="a.activo !== false" [class.bg-secondary]="a.activo === false">
+              <span
+                class="badge"
+                [class.bg-success]="a.activo !== false"
+                [class.bg-secondary]="a.activo === false">
                 {{ a.activo === false ? 'Inactivo' : 'Activo' }}
               </span>
             </td>
@@ -39,11 +51,15 @@
           </tr>
 
           <tr *ngIf="!loading && agricultores.length === 0">
-            <td colspan="7" class="text-center text-muted py-3">Sin agricultores registrados</td>
+            <td colspan="7" class="text-center text-muted py-3">
+              Sin agricultores registrados
+            </td>
           </tr>
+
         </tbody>
       </table>
 
     </div>
   </div>
+
 </div>
