@@ -2,65 +2,83 @@
   <div class="login-card card shadow-lg">
 
     <div class="login-header text-center">
-      <div class="coffee-icon">☕</div>
-      <h4 class="fw-bold text-white mb-1">Cafetito</h4>
-      <p class="text-white-50 small">Automatización de Procesos</p>
+      <div class="coffee-icon">CAFETITO</div>
+
+      <p class="text-white-50 small">
+        Automatización de Procesos
+      </p>
     </div>
 
     <div class="card-body p-4">
-      <h5 class="text-center fw-semibold mb-4">Iniciar Sesión</h5>
+
+      <h5 class="text-center fw-semibold mb-4">
+        Iniciar Sesión
+      </h5>
 
       <div class="alert alert-danger" *ngIf="errorMsg">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ errorMsg }}
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        {{ errorMsg }}
       </div>
 
       <form [formGroup]="form" (ngSubmit)="acceder()">
 
         <div class="mb-3">
-          <label class="form-label fw-medium">Nombre de usuario</label>
+          <label class="form-label fw-medium">
+            Nombre de usuario
+          </label>
+
           <div class="input-group">
             <span class="input-group-text">
               <i class="bi bi-person-fill"></i>
             </span>
+
             <input
               type="text"
               class="form-control"
-              [class.is-invalid]="nombre.invalid && nombre.touched"
               formControlName="nombre"
               placeholder="Ingrese su usuario">
-            <div class="invalid-feedback">El nombre de usuario es requerido.</div>
           </div>
         </div>
 
         <div class="mb-4">
-          <label class="form-label fw-medium">Contraseña</label>
+          <label class="form-label fw-medium">
+            Contraseña
+          </label>
+
           <div class="input-group">
             <span class="input-group-text">
               <i class="bi bi-lock-fill"></i>
             </span>
+
             <input
               [type]="mostrarPassword ? 'text' : 'password'"
               class="form-control"
-              [class.is-invalid]="contrasena.invalid && contrasena.touched"
               formControlName="contrasena"
               placeholder="Ingrese su contraseña">
-            <button type="button" class="btn btn-outline-secondary"
-              (click)="mostrarPassword = !mostrarPassword">
-              <i class="bi" [class.bi-eye]="!mostrarPassword"
-                [class.bi-eye-slash]="mostrarPassword"></i>
-            </button>
-            <div class="invalid-feedback">La contraseña es requerida.</div>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-cafetito w-100 py-2 fw-semibold"
+        <button
+          type="submit"
+          class="btn btn-cafetito w-100 py-2 fw-semibold"
           [disabled]="cargando">
-          <span *ngIf="cargando" class="spinner-border spinner-border-sm me-2"></span>
-          <i *ngIf="!cargando" class="bi bi-box-arrow-in-right me-2"></i>
+
+          <span
+            *ngIf="cargando"
+            class="spinner-border spinner-border-sm me-2">
+          </span>
+
+          <i
+            *ngIf="!cargando"
+            class="bi bi-box-arrow-in-right me-2">
+          </i>
+
           {{ cargando ? 'Verificando...' : 'Acceder' }}
+
         </button>
 
       </form>
+
     </div>
   </div>
 </div>

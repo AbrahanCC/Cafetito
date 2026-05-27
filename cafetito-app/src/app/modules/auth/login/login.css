@@ -1,44 +1,46 @@
+:host {
+  display: block;
+}
+
 .login-wrapper {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a3a08 0%, #2d5016 50%, #4a7c1f 100%);
+  background-image:
+    linear-gradient(90deg, rgba(8, 28, 12, .82), rgba(8, 28, 12, .25)),
+    url('/images/cafe-bg.png');
+  background-size: cover;
+  background-position: center;
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
+  padding: 40px 90px;
 }
 
 .login-card {
-  width: 100%;
-  max-width: 420px;
-  border: none;
-  border-radius: 16px;
+  width: 430px;
+  border: 0;
+  border-radius: 24px;
   overflow: hidden;
+  background: rgba(255, 255, 255, .94);
+  box-shadow: 0 25px 60px rgba(0,0,0,.45);
 }
 
 .login-header {
-  background: linear-gradient(135deg, #2d5016 0%, #4a7c1f 100%);
-  padding: 2rem 1.5rem 1.5rem;
+  background: linear-gradient(135deg, #123f16, #2e7d32);
+  padding: 35px;
+  text-align: center;
+  color: white;
 }
 
 .coffee-icon {
-  font-size: 3rem;
+  font-size: 44px;
 }
 
 .btn-cafetito {
-  background: linear-gradient(135deg, #2d5016, #4a7c1f);
+  width: 100%;
+  height: 50px;
+  background: linear-gradient(135deg, #1b5e20, #43a047);
   color: white;
   border: none;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.btn-cafetito:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1a3a08, #2d5016);
-  color: white;
-  transform: translateY(-1px);
-}
-
-.btn-cafetito:disabled {
-  opacity: 0.65;
-  color: white;
+  border-radius: 14px;
+  font-weight: bold;
 }
