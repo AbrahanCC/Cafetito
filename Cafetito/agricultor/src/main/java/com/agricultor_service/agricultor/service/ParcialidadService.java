@@ -24,7 +24,8 @@ public class ParcialidadService {
             ParcialidadRepository parcialidadRepository,
             PesajeRepository pesajeRepository,
             TransporteRepository transporteRepository,
-            TransportistaRepository transportistaRepository) {
+            TransportistaRepository transportistaRepository
+    ) {
         this.parcialidadRepository = parcialidadRepository;
         this.pesajeRepository = pesajeRepository;
         this.transporteRepository = transporteRepository;
@@ -37,6 +38,7 @@ public class ParcialidadService {
 
     @Transactional
     public Parcialidad crear(Long idPesaje, Parcialidad parcialidad) {
+
         Pesaje pesaje = pesajeRepository.findById(idPesaje)
                 .orElseThrow(() -> new RuntimeException("Pesaje no encontrado"));
 
@@ -48,14 +50,18 @@ public class ParcialidadService {
         Transporte transporte = transporteRepository.findByPlaca(placa)
                 .orElseThrow(() -> new RuntimeException("Transporte no encontrado"));
 
-        if (Boolean.FALSE.equals(transporte.getDisponible())) {
+        if (Boolean.FALSE.equals(transporte.getDisponible())
+                && !idPesaje.equals(transporte.getPesajeAsociado())) {
+
             throw new RuntimeException("El transporte no está disponible");
         }
 
         Transportista transportista = transportistaRepository.findById(parcialidad.getIdTransportista())
                 .orElseThrow(() -> new RuntimeException("Transportista no encontrado"));
 
-        if (Boolean.FALSE.equals(transportista.getDisponible())) {
+        if (Boolean.FALSE.equals(transportista.getDisponible())
+                && !idPesaje.equals(transportista.getPesajeAsociado())) {
+
             throw new RuntimeException("El transportista no está disponible");
         }
 
@@ -65,8 +71,10 @@ public class ParcialidadService {
         Double pesoActualRegistrado = parcialidadRepository.sumarPesoPorPesaje(idPesaje);
         Double nuevoTotal = pesoActualRegistrado + pesoKg;
 
-        if (pesaje.getPesoTotalActual() != null && nuevoTotal > pesaje.getPesoTotalActual()) {
-            throw new RuntimeException("El total de parcialidades supera el peso total del pesaje");
+        Double maximoPermitido = pesaje.getPesoTotalActual() * 1.05;
+
+        if (nuevoTotal > maximoPermitido) {
+            throw new RuntimeException("El total de parcialidades supera la tolerancia permitida de +5%");
         }
 
         DetalleCatalogo estado = new DetalleCatalogo();
@@ -74,6 +82,7 @@ public class ParcialidadService {
 
         parcialidad.setIdParcialidad(null);
         parcialidad.setPesaje(pesaje);
+        parcialidad.setIdCuenta(pesaje.getIdCuenta());
         parcialidad.setPlaca(placa);
         parcialidad.setEstado(estado);
         parcialidad.setPesoActual(pesoKg);
@@ -84,22 +93,26 @@ public class ParcialidadService {
         Parcialidad guardada = parcialidadRepository.save(parcialidad);
 
         pesaje.setCantidadParcialidades(
-                pesaje.getCantidadParcialidades() == null ? 1 : pesaje.getCantidadParcialidades() + 1
+                pesaje.getCantidadParcialidades() == null
+                        ? 1
+                        : pesaje.getCantidadParcialidades() + 1
         );
+
         pesajeRepository.save(pesaje);
 
-        transporte.setDisponible(false);
-        transporte.setPesajeAsociado(idPesaje);
+        transporte.setDisponible(true);
+        transporte.setPesajeAsociado(null);
         transporteRepository.save(transporte);
 
-        transportista.setDisponible(false);
-        transportista.setPesajeAsociado(idPesaje);
+        transportista.setDisponible(true);
+        transportista.setPesajeAsociado(null);
         transportistaRepository.save(transportista);
 
         return guardada;
     }
 
     private void validarEstadoPesaje(Pesaje pesaje) {
+
         if (pesaje.getEstado() == null || pesaje.getEstado().getIdDetalleCatalogo() == null) {
             throw new RuntimeException("El pesaje no tiene estado asignado");
         }
@@ -110,6 +123,7 @@ public class ParcialidadService {
     }
 
     private void validarDatosParcialidad(Parcialidad parcialidad) {
+
         if (parcialidad.getPlaca() == null || parcialidad.getPlaca().isBlank()) {
             throw new RuntimeException("La placa del transporte es obligatoria");
         }
@@ -124,6 +138,7 @@ public class ParcialidadService {
     }
 
     private Double obtenerFactorConversion(Pesaje pesaje) {
+
         if (pesaje.getMedida() == null) {
             throw new RuntimeException("El pesaje no tiene medida asignada");
         }

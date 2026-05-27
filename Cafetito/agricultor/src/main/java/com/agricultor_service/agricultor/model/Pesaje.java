@@ -20,8 +20,8 @@ public class Pesaje {
     @Column(name = "id_pesaje")
     private Long idPesaje;
 
-    @Column(name = "no_cuenta")
-    private String noCuenta;
+    @Column(name = "id_cuenta", nullable = false)
+    private Long idCuenta;
 
     @ManyToOne
     @JoinColumn(name = "id_agricultor", nullable = false)

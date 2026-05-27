@@ -26,6 +26,9 @@ public class Parcialidad {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Pesaje pesaje;
 
+    @Column(name = "id_cuenta", nullable = false)
+    private Long idCuenta;
+
     @Column(name = "placa", nullable = false)
     private String placa;
 

@@ -1,15 +1,7 @@
 package com.agricultor_service.agricultor.service;
 
-import com.agricultor_service.agricultor.dto.CuentaBeneficioRequest;
-import com.agricultor_service.agricultor.model.Agricultor;
-import com.agricultor_service.agricultor.model.DetalleCatalogo;
-import com.agricultor_service.agricultor.model.Pesaje;
-import com.agricultor_service.agricultor.model.Transporte;
-import com.agricultor_service.agricultor.model.Transportista;
-import com.agricultor_service.agricultor.repository.AgricultorRepository;
-import com.agricultor_service.agricultor.repository.PesajeRepository;
-import com.agricultor_service.agricultor.repository.TransporteRepository;
-import com.agricultor_service.agricultor.repository.TransportistaRepository;
+import com.agricultor_service.agricultor.model.*;
+import com.agricultor_service.agricultor.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,22 +15,23 @@ public class PesajeService {
     private static final Long ESTADO_PESAJE_FINALIZADO = 3L;
 
     private final PesajeRepository pesajeRepository;
+    private final ParcialidadRepository parcialidadRepository;
     private final AgricultorRepository agricultorRepository;
     private final TransporteRepository transporteRepository;
     private final TransportistaRepository transportistaRepository;
-    private final BeneficioClientService beneficioClientService;
 
-    public PesajeService(PesajeRepository pesajeRepository,
-                         AgricultorRepository agricultorRepository,
-                         TransporteRepository transporteRepository,
-                         TransportistaRepository transportistaRepository,
-                         BeneficioClientService beneficioClientService) {
-
+    public PesajeService(
+            PesajeRepository pesajeRepository,
+            ParcialidadRepository parcialidadRepository,
+            AgricultorRepository agricultorRepository,
+            TransporteRepository transporteRepository,
+            TransportistaRepository transportistaRepository
+    ) {
         this.pesajeRepository = pesajeRepository;
+        this.parcialidadRepository = parcialidadRepository;
         this.agricultorRepository = agricultorRepository;
         this.transporteRepository = transporteRepository;
         this.transportistaRepository = transportistaRepository;
-        this.beneficioClientService = beneficioClientService;
     }
 
     public List<Pesaje> listarPorAgricultor(Long idAgricultor) {
@@ -54,9 +47,15 @@ public class PesajeService {
                 .orElseThrow(() -> new RuntimeException("Pesaje no encontrado"));
     }
 
+    @Transactional
     public Pesaje crear(Long idAgricultor, Pesaje pesaje) {
+
         if (idAgricultor == null) {
             throw new RuntimeException("No se encontró el agricultor asociado al usuario autenticado");
+        }
+
+        if (pesaje.getIdCuenta() == null) {
+            throw new RuntimeException("Debe seleccionar una cuenta");
         }
 
         if (pesaje.getPesoTotalActual() == null || pesaje.getPesoTotalActual() <= 0) {
@@ -81,6 +80,7 @@ public class PesajeService {
 
     @Transactional
     public Pesaje finalizar(Long idPesaje) {
+
         Pesaje pesaje = pesajeRepository.findById(idPesaje)
                 .orElseThrow(() -> new RuntimeException("Pesaje no encontrado"));
 
@@ -88,14 +88,37 @@ public class PesajeService {
             throw new RuntimeException("No se puede finalizar un pesaje sin parcialidades");
         }
 
+        Double totalParcialidades = parcialidadRepository.sumarPesoPorPesaje(idPesaje);
+        Double objetivo = pesaje.getPesoTotalActual();
+
+        if (objetivo == null || objetivo <= 0) {
+            throw new RuntimeException("El pesaje no tiene peso objetivo válido");
+        }
+
+        Double minimo = objetivo * 0.95;
+        Double maximo = objetivo * 1.05;
+
+        if (totalParcialidades < minimo || totalParcialidades > maximo) {
+            throw new RuntimeException("El pesaje no cumple la tolerancia permitida de ±5%");
+        }
+
         DetalleCatalogo estado = new DetalleCatalogo();
         estado.setIdDetalleCatalogo(ESTADO_PESAJE_FINALIZADO);
+
         pesaje.setEstado(estado);
 
+        liberarTransporteYTransportista(
+                pesaje.getIdPesaje(),
+                pesaje.getAgricultor().getIdAgricultor()
+        );
+
+        return pesajeRepository.save(pesaje);
+    }
+
+    private void liberarTransporteYTransportista(Long idPesaje, Long idAgricultor) {
+
         List<Transporte> transportes =
-                transporteRepository.findByAgricultor_IdAgricultor(
-                        pesaje.getAgricultor().getIdAgricultor()
-                );
+                transporteRepository.findByAgricultor_IdAgricultor(idAgricultor);
 
         for (Transporte transporte : transportes) {
             if (idPesaje.equals(transporte.getPesajeAsociado())) {
@@ -106,9 +129,7 @@ public class PesajeService {
         }
 
         List<Transportista> transportistas =
-                transportistaRepository.findByAgricultor_IdAgricultor(
-                        pesaje.getAgricultor().getIdAgricultor()
-                );
+                transportistaRepository.findByAgricultor_IdAgricultor(idAgricultor);
 
         for (Transportista transportista : transportistas) {
             if (idPesaje.equals(transportista.getPesajeAsociado())) {
@@ -117,21 +138,10 @@ public class PesajeService {
                 transportistaRepository.save(transportista);
             }
         }
-
-        Pesaje pesajeFinalizado = pesajeRepository.save(pesaje);
-
-        CuentaBeneficioRequest request = new CuentaBeneficioRequest();
-        request.setNitAgricultor(pesajeFinalizado.getAgricultor().getIdAgricultor());
-        request.setPesoObjetivo(pesajeFinalizado.getPesoTotalActual());
-        request.setCantidadParcialidades(pesajeFinalizado.getCantidadParcialidades());
-        request.setEstado("PESAJE_FINALIZADO");
-
-        beneficioClientService.crearCuentaEnBeneficio(request);
-
-        return pesajeFinalizado;
     }
 
     private DetalleCatalogo obtenerMedida(Pesaje pesaje) {
+
         if (pesaje.getMedida() == null) {
             throw new RuntimeException("La medida de peso es obligatoria");
         }
@@ -142,9 +152,7 @@ public class PesajeService {
             throw new RuntimeException("Debe seleccionar una medida");
         }
 
-        if (!idMedida.equals(4L)
-                && !idMedida.equals(5L)
-                && !idMedida.equals(6L)) {
+        if (!idMedida.equals(4L) && !idMedida.equals(5L) && !idMedida.equals(6L)) {
             throw new RuntimeException("Medida inválida");
         }
 

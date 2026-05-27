@@ -34,24 +34,18 @@ public class CuentaService {
         return cuentaRepository.findById(id);
     }
 
-    public List<Cuenta> listarPorAgricultor(Long nitAgricultor) {
-
-        return cuentaRepository.findByIdAgricultor(
-                nitAgricultor
-        );
+    public List<Cuenta> listarPorAgricultor(Long idAgricultor) {
+        return cuentaRepository.findByIdAgricultor(idAgricultor);
     }
 
     public List<Cuenta> listarPorEstado(String estado) {
-
-        return cuentaRepository.findByEstado(
-                estado
-        );
+        return cuentaRepository.findByEstado(estado);
     }
 
     public List<Cuenta> listarCuentasParaPesoCabal() {
-
         return cuentaRepository.findByEstadoIn(
                 List.of(
+                        CUENTA_CONFIRMADA,
                         PESAJE_INICIADO,
                         PESAJE_FINALIZADO
                 )
@@ -59,17 +53,11 @@ public class CuentaService {
     }
 
     public List<Cuenta> listarCuentasCerradas() {
-
-        return cuentaRepository.findByEstado(
-                CUENTA_CERRADA
-        );
+        return cuentaRepository.findByEstado(CUENTA_CERRADA);
     }
 
     public List<Cuenta> listarCuentasConfirmadas() {
-
-        return cuentaRepository.findByEstado(
-                CUENTA_CONFIRMADA
-        );
+        return cuentaRepository.findByEstado(CUENTA_CONFIRMADA);
     }
 
     @Transactional
@@ -78,39 +66,25 @@ public class CuentaService {
         cuenta.setIdCuenta(null);
 
         if (cuenta.getIdAgricultor() == null) {
-            throw new RuntimeException(
-                    "Debe indicar el agricultor"
-            );
+            throw new RuntimeException("Debe indicar el agricultor");
         }
 
-        if (cuenta.getPesoObjetivo() == null
-                || cuenta.getPesoObjetivo() <= 0) {
-
-            throw new RuntimeException(
-                    "Peso objetivo inválido"
-            );
+        if (cuenta.getPesoObjetivo() == null || cuenta.getPesoObjetivo() <= 0) {
+            throw new RuntimeException("Peso objetivo inválido");
         }
 
-        cuenta.setFechaEnvio(
-                LocalDateTime.now()
-        );
-
-        cuenta.setEstado(
-                CUENTA_CREADA
-        );
+        cuenta.setFechaEnvio(LocalDateTime.now());
+        cuenta.setEstado(CUENTA_CREADA);
 
         cuenta.setPesoAcumulado(0.0);
         cuenta.setPesoBasculaTotal(0.0);
-        cuenta.setSaldoPendiente(
-                cuenta.getPesoObjetivo()
-        );
-
+        cuenta.setSaldoPendiente(cuenta.getPesoObjetivo());
         cuenta.setCantidadParcialidades(0);
         cuenta.setDiferenciaTotal(0.0);
         cuenta.setTolerancia(TOLERANCIA_DEFAULT);
+        cuenta.setResultadoTolerancia(null);
 
-        Cuenta guardada =
-                cuentaRepository.save(cuenta);
+        Cuenta guardada = cuentaRepository.save(cuenta);
 
         historialService.registrarCambio(
                 guardada,
@@ -130,30 +104,27 @@ public class CuentaService {
     }
 
     @Transactional
-    public Cuenta actualizar(
-            Long id,
-            Cuenta cuenta,
-            String usuario
-    ) {
+    public Cuenta actualizar(Long id, Cuenta cuenta, String usuario) {
 
-        Cuenta existente =
-                cuentaRepository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Cuenta no encontrada"
-                                )
-                        );
+        Cuenta existente = cuentaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        existente.setIdAgricultor(
-                cuenta.getIdAgricultor()
-        );
+        existente.setIdAgricultor(cuenta.getIdAgricultor());
+        existente.setPesoObjetivo(cuenta.getPesoObjetivo());
 
-        existente.setPesoObjetivo(
-                cuenta.getPesoObjetivo()
-        );
+        if (cuenta.getCantidadParcialidades() != null) {
+            existente.setCantidadParcialidades(cuenta.getCantidadParcialidades());
+        }
 
-        Cuenta actualizada =
-                cuentaRepository.save(existente);
+        if (cuenta.getPesoAcumulado() != null) {
+            existente.setPesoAcumulado(cuenta.getPesoAcumulado());
+        }
+
+        if (cuenta.getPesoBasculaTotal() != null) {
+            existente.setPesoBasculaTotal(cuenta.getPesoBasculaTotal());
+        }
+
+        Cuenta actualizada = cuentaRepository.save(existente);
 
         bitacoraService.registrarOperacion(
                 "ACTUALIZAR_CUENTA",
@@ -173,39 +144,29 @@ public class CuentaService {
             String usuario
     ) {
 
-        Cuenta cuenta =
-                cuentaRepository.findById(id)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Cuenta no encontrada"
-                                )
-                        );
+        Cuenta cuenta = cuentaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        cuenta.setEstado(
-                nuevoEstado
-        );
+        if (nuevoEstado == null || nuevoEstado.isBlank()) {
+            throw new RuntimeException("Debe indicar el nuevo estado");
+        }
 
-        if (CUENTA_CERRADA.equals(
-                nuevoEstado
-        )) {
+        cuenta.setEstado(nuevoEstado);
 
-            cuenta.setFechaLlegada(
-                    LocalDateTime.now()
-            );
+        if (CUENTA_CERRADA.equals(nuevoEstado)) {
+            cuenta.setFechaLlegada(LocalDateTime.now());
         }
 
         cuenta.setDiferenciaTotal(
-                diferenciaTotal
+                diferenciaTotal != null ? diferenciaTotal : 0.0
         );
 
-        Cuenta actualizada =
-                cuentaRepository.save(cuenta);
+        Cuenta actualizada = cuentaRepository.save(cuenta);
 
         historialService.registrarCambio(
                 actualizada,
                 nuevoEstado,
-                diferenciaTotal != null
-                        ? diferenciaTotal : 0.0,
+                actualizada.getDiferenciaTotal(),
                 actualizada.getTolerancia()
         );
 
@@ -218,5 +179,4 @@ public class CuentaService {
 
         return actualizada;
     }
-
 }

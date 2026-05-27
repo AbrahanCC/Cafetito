@@ -10,4 +10,6 @@ import java.util.List;
 public interface PesajeRepository extends JpaRepository<Pesaje, Long> {
 
     List<Pesaje> findByAgricultor_IdAgricultor(Long idAgricultor);
+
+    List<Pesaje> findByIdCuenta(Long idCuenta);
 }
