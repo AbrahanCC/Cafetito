@@ -12,6 +12,9 @@ export class PesajesService {
   private readonly API_URL =
     'http://localhost:8090/api/agricultor/pesajes';
 
+  private readonly API_CUENTAS =
+    'http://localhost:8090/api/agricultor/cuentas';
+
   constructor(
     private http: HttpClient
   ) {}
@@ -20,16 +23,12 @@ export class PesajesService {
     return this.http.get<Pesaje[]>(this.API_URL);
   }
 
+  listarCuentasDisponibles(): Observable<any[]> {
+    return this.http.get<any[]>(this.API_CUENTAS);
+  }
+
   crear(body: Pesaje): Observable<Pesaje> {
     return this.http.post<Pesaje>(this.API_URL, body);
-  }
-
-  actualizar(id: number, body: Pesaje): Observable<Pesaje> {
-    return this.http.put<Pesaje>(`${this.API_URL}/${id}`, body);
-  }
-
-  eliminar(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.API_URL}/${id}`);
   }
 
   finalizar(idPesaje: number): Observable<Pesaje> {

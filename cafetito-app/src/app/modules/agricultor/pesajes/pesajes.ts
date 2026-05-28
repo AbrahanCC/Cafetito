@@ -16,6 +16,7 @@ export class PesajesComponent implements OnInit {
 
   pesajes: Pesaje[] = [];
   medidas: DetalleCatalogo[] = [];
+  cuentasDisponibles: any[] = [];
 
   loading = false;
   showForm = false;
@@ -34,12 +35,14 @@ export class PesajesComponent implements OnInit {
 
   ngOnInit(): void {
     this.form = this.fb.group({
+      idCuenta: ['', Validators.required],
       medida: ['', Validators.required],
       pesoTotalActual: [null, [Validators.required, Validators.min(1)]],
       observaciones: ['']
     });
 
     this.cargarMedidas();
+    this.cargarCuentasDisponibles();
     this.cargarDatos();
   }
 
@@ -51,6 +54,22 @@ export class PesajesComponent implements OnInit {
       },
       error: () => {
         this.mensajeError = 'No se pudieron cargar las medidas';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  cargarCuentasDisponibles(): void {
+    this.pesajesService.listarCuentasDisponibles().subscribe({
+      next: data => {
+        this.cuentasDisponibles = data || [];
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        this.cuentasDisponibles = [];
+        this.mensajeError =
+          err?.error?.error ||
+          'No se pudieron cargar las cuentas disponibles';
         this.cdr.detectChanges();
       }
     });
@@ -69,7 +88,9 @@ export class PesajesComponent implements OnInit {
       error: (err: any) => {
         this.pesajes = [];
         this.loading = false;
-        this.mensajeError = err?.error?.error || 'Error cargando pesajes';
+        this.mensajeError =
+          err?.error?.error ||
+          'Error cargando pesajes';
         this.cdr.detectChanges();
       }
     });
@@ -80,6 +101,7 @@ export class PesajesComponent implements OnInit {
     this.form.reset();
     this.mensajeExito = '';
     this.mensajeError = '';
+    this.cargarCuentasDisponibles();
   }
 
   guardar(): void {
@@ -88,11 +110,27 @@ export class PesajesComponent implements OnInit {
       return;
     }
 
+    const cuenta = this.obtenerCuentaSeleccionada();
+
+    if (!cuenta) {
+      this.mensajeError = 'Debe seleccionar una cuenta válida';
+      return;
+    }
+
+    const peso = Number(this.form.value.pesoTotalActual);
+
+    if (cuenta.saldoPendiente != null && peso > Number(cuenta.saldoPendiente)) {
+      this.mensajeError = 'El peso supera el saldo pendiente de la cuenta';
+      return;
+    }
+
     const body: Pesaje = {
+      idCuenta: Number(this.form.value.idCuenta),
+      noCuenta: String(this.form.value.idCuenta),
       medida: {
         idDetalleCatalogo: Number(this.form.value.medida)
       },
-      pesoTotalActual: Number(this.form.value.pesoTotalActual),
+      pesoTotalActual: peso,
       observaciones: this.form.value.observaciones
     };
 
@@ -101,13 +139,24 @@ export class PesajesComponent implements OnInit {
         this.showForm = false;
         this.form.reset();
         this.mensajeExito = 'Pesaje creado correctamente';
+        this.cargarCuentasDisponibles();
         this.cargarDatos();
       },
       error: (err: any) => {
-        this.mensajeError = err?.error?.error || 'No se pudo crear el pesaje';
+        this.mensajeError =
+          err?.error?.error ||
+          'No se pudo crear el pesaje';
         this.cdr.detectChanges();
       }
     });
+  }
+
+  obtenerCuentaSeleccionada(): any {
+    const idCuenta = Number(this.form.value.idCuenta);
+
+    return this.cuentasDisponibles.find(
+      c => Number(c.idCuenta) === idCuenta
+    );
   }
 
   verDetalle(pesaje: Pesaje): void {
@@ -127,7 +176,8 @@ export class PesajesComponent implements OnInit {
       return;
     }
 
-    const confirmar = confirm('¿Desea finalizar el pesaje?');
+    const confirmar =
+      confirm('¿Desea finalizar el pesaje?');
 
     if (!confirmar) {
       return;
@@ -136,10 +186,13 @@ export class PesajesComponent implements OnInit {
     this.pesajesService.finalizar(pesaje.idPesaje).subscribe({
       next: () => {
         this.mensajeExito = 'Pesaje finalizado correctamente';
+        this.cargarCuentasDisponibles();
         this.cargarDatos();
       },
       error: (err: any) => {
-        this.mensajeError = err?.error?.error || 'No se pudo finalizar el pesaje';
+        this.mensajeError =
+          err?.error?.error ||
+          'No se pudo finalizar el pesaje';
         this.cdr.detectChanges();
       }
     });
@@ -164,7 +217,10 @@ export class PesajesComponent implements OnInit {
   }
 
   obtenerEstado(pesaje: Pesaje): string {
-    return pesaje.estado?.valor || this.obtenerEstadoPorId(pesaje.estado?.idDetalleCatalogo);
+    return pesaje.estado?.valor ||
+      this.obtenerEstadoPorId(
+        pesaje.estado?.idDetalleCatalogo
+      );
   }
 
   obtenerEstadoPorId(id?: number): string {

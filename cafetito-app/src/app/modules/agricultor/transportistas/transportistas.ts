@@ -22,14 +22,14 @@ export class TransportistasAgricultorComponent implements OnInit {
 
   loading = false;
   showForm = false;
+  procesando = false;
 
   error = '';
   mensajeExito = '';
 
   form: FormGroup;
 
-  private apiUrl =
-    'http://localhost:8090/api/agricultor/transportistas';
+  private apiUrl = 'http://localhost:8090/api/agricultor/transportistas';
 
   constructor(
     private http: HttpClient,
@@ -59,7 +59,7 @@ export class TransportistasAgricultorComponent implements OnInit {
       },
       error: () => {
         this.licencias = [];
-        this.error = 'No se pudieron cargar las licencias';
+        this.error = 'No se pudieron cargar las licencias.';
         this.cdr.detectChanges();
       }
     });
@@ -78,7 +78,7 @@ export class TransportistasAgricultorComponent implements OnInit {
       error: err => {
         this.transportistas = [];
         this.loading = false;
-        this.error = err?.error?.error || 'No se pudieron cargar los transportistas';
+        this.error = this.obtenerMensajeError(err, 'No se pudieron cargar los transportistas.');
         this.cdr.detectChanges();
       }
     });
@@ -88,18 +88,32 @@ export class TransportistasAgricultorComponent implements OnInit {
     this.showForm = true;
     this.error = '';
     this.mensajeExito = '';
-    this.form.reset();
+    this.form.reset({
+      cui: '',
+      nombre: '',
+      fechaNacimiento: '',
+      tipoLicencia: '',
+      fechaVenciLicencia: ''
+    });
   }
 
   guardar(): void {
+    if (this.procesando) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
+    this.error = '';
+    this.mensajeExito = '';
+    this.procesando = true;
+
     const body = {
-      cui: this.form.value.cui,
-      nombre: this.form.value.nombre,
+      cui: String(this.form.value.cui || '').trim(),
+      nombre: String(this.form.value.nombre || '').trim(),
       fechaNacimiento: this.form.value.fechaNacimiento,
       tipoLicencia: {
         idCatalogo: Number(this.form.value.tipoLicencia)
@@ -109,19 +123,25 @@ export class TransportistasAgricultorComponent implements OnInit {
 
     this.http.post(this.apiUrl, body).subscribe({
       next: () => {
+        this.procesando = false;
         this.showForm = false;
         this.form.reset();
-        this.mensajeExito = 'Transportista creado correctamente';
+        this.mensajeExito = 'Transportista creado correctamente.';
         this.cargarDatos();
       },
       error: err => {
-        this.error = err?.error?.error || 'Error al guardar transportista';
+        this.procesando = false;
+        this.error = this.obtenerMensajeError(err, 'Error al guardar transportista.');
         this.cdr.detectChanges();
       }
     });
   }
 
   cancelar(): void {
+    if (this.procesando) {
+      return;
+    }
+
     this.showForm = false;
     this.form.reset();
   }
@@ -135,13 +155,21 @@ export class TransportistasAgricultorComponent implements OnInit {
   }
 
   obtenerEstado(estado?: number): string {
-    switch (estado) {
-      case 1:
-        return 'Activo';
-      case 0:
-        return 'Inactivo';
-      default:
-        return 'Activo';
+    if (estado === 1) {
+      return 'Activo';
     }
+
+    if (estado === 0) {
+      return 'Inactivo';
+    }
+
+    return 'Activo';
+  }
+
+  obtenerMensajeError(err: any, mensajeDefault: string): string {
+    return err?.error?.mensaje ||
+           err?.error?.error ||
+           err?.message ||
+           mensajeDefault;
   }
 }

@@ -189,6 +189,7 @@ export interface ActualizarEstadoTransportistaRequest {
 
 export interface Pesaje {
   idPesaje?: number;
+  idCuenta?: number;
   noCuenta?: string;
   agricultor?: Agricultor;
   estado?: DetalleCatalogo;

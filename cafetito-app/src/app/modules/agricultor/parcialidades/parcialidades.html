@@ -1,30 +1,49 @@
 <div class="container-fluid py-4">
 
   <div class="d-flex justify-content-between align-items-center mb-4">
+
     <div>
       <h2 class="fw-bold mb-1">Detalle de Pesaje</h2>
 
       <p class="text-muted mb-0">
         No. Cuenta:
-        <strong>{{ pesaje?.noCuenta || 'Sin cuenta asociada' }}</strong>
+        <strong>{{ obtenerNoCuenta() }}</strong>
         |
         Pesaje:
         <strong>{{ idPesaje }}</strong>
         |
         Medida:
         <strong>{{ obtenerMedida() }}</strong>
+        |
+        Estado:
+        <span class="badge" [ngClass]="obtenerBadgePesaje()">
+          {{ obtenerEstadoPesaje() }}
+        </span>
       </p>
     </div>
 
     <div>
-      <button class="btn btn-success me-2" (click)="nueva()">
+      <button
+        class="btn btn-success me-2"
+        (click)="nueva()"
+        [disabled]="procesando || !puedeCrearParcialidad()">
         + Nueva parcialidad
       </button>
 
-      <button class="btn btn-secondary" (click)="regresar()">
+      <button
+        class="btn btn-warning me-2"
+        (click)="finalizarPesaje()"
+        [disabled]="procesando || !puedeFinalizarPesaje()">
+        Finalizar pesaje
+      </button>
+
+      <button
+        class="btn btn-secondary"
+        (click)="regresar()">
         Regresar
       </button>
     </div>
+
   </div>
 
   <div class="alert alert-success" *ngIf="mensajeExito">
@@ -33,6 +52,41 @@
 
   <div class="alert alert-danger" *ngIf="error">
     {{ error }}
+  </div>
+
+  <div class="card mb-3" *ngIf="pesaje">
+    <div class="card-body">
+
+      <div class="row g-3">
+
+        <div class="col-md-3">
+          <strong>No. Cuenta</strong>
+          <p>{{ obtenerNoCuenta() }}</p>
+        </div>
+
+        <div class="col-md-3">
+          <strong>Peso objetivo del pesaje</strong>
+          <p>{{ pesaje?.pesoTotalActual || 0 }} {{ obtenerMedida() }}</p>
+        </div>
+
+        <div class="col-md-3">
+          <strong>Total parcialidades registradas</strong>
+          <p>{{ obtenerPesoTotalParcialidades() }} KG</p>
+        </div>
+
+        <div class="col-md-3">
+          <strong>Cantidad parcialidades</strong>
+          <p>{{ parcialidades.length }}</p>
+        </div>
+
+      </div>
+
+      <p class="text-muted mb-0" *ngIf="pesaje?.observaciones">
+        <strong>Observaciones:</strong>
+        {{ pesaje.observaciones }}
+      </p>
+
+    </div>
   </div>
 
   <div class="card mb-3" *ngIf="showForm">
@@ -52,47 +106,83 @@
               type="number"
               step="0.01"
               class="form-control"
-              formControlName="pesoActual">
+              formControlName="pesoActual"
+              placeholder="Ej. 100">
+
             <small class="text-muted">
-              Se guardará convertido a KG según el factor de conversión.
+              El backend lo convertirá a KG según el factor de conversión del pesaje.
             </small>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('pesoActual')?.invalid && form.get('pesoActual')?.touched">
+              El peso debe ser mayor a 0.
+            </div>
           </div>
 
           <div class="col-md-4">
             <label class="form-label">Transporte disponible</label>
+
             <select class="form-select" formControlName="placa">
               <option value="">Seleccione transporte</option>
               <option *ngFor="let t of transportes" [value]="t.placa">
                 {{ t.placa }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('placa')?.invalid && form.get('placa')?.touched">
+              Debe seleccionar un transporte.
+            </div>
           </div>
 
           <div class="col-md-4">
             <label class="form-label">Transportista disponible</label>
+
             <select class="form-select" formControlName="idTransportista">
               <option value="">Seleccione transportista</option>
               <option *ngFor="let t of transportistas" [value]="t.idTransportista">
                 {{ t.nombre }} - {{ t.cui }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('idTransportista')?.invalid && form.get('idTransportista')?.touched">
+              Debe seleccionar un transportista.
+            </div>
           </div>
 
           <div class="col-md-12">
             <label class="form-label">Observaciones</label>
-            <textarea class="form-control" rows="2" formControlName="observaciones"></textarea>
+            <textarea
+              class="form-control"
+              rows="2"
+              formControlName="observaciones"
+              placeholder="Observaciones opcionales">
+            </textarea>
           </div>
 
         </div>
 
         <div class="mt-3">
-          <button type="submit" class="btn btn-success me-2" [disabled]="form.invalid">
-            Crear
+
+          <button
+            type="submit"
+            class="btn btn-success me-2"
+            [disabled]="form.invalid || procesando">
+            Crear y enviar a Beneficio
           </button>
 
-          <button type="button" class="btn btn-secondary" (click)="cancelar()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="cancelar()"
+            [disabled]="procesando">
             Cancelar
           </button>
+
         </div>
 
       </form>
@@ -101,9 +191,10 @@
   </div>
 
   <div class="card shadow-sm">
-    <div class="card-body">
+    <div class="card-body p-0">
 
-      <table class="table table-hover">
+      <table class="table table-hover mb-0">
+
         <thead class="table-success">
           <tr>
             <th>ID Parcialidad</th>
@@ -111,37 +202,61 @@
             <th>Nombre Transportista</th>
             <th>Peso KG</th>
             <th>Tipo de Medida</th>
-            <th>Fecha Recepción</th>
+            <th>Fecha Registro</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
           </tr>
         </thead>
 
         <tbody>
 
           <tr *ngIf="loading">
-            <td colspan="6" class="text-center py-4">
+            <td colspan="8" class="text-center py-4">
               Cargando parcialidades...
             </td>
           </tr>
 
           <tr *ngFor="let p of parcialidades">
+
             <td>{{ p.idParcialidad }}</td>
+
             <td>{{ p.placa }}</td>
+
             <td>{{ obtenerNombreTransportista(p.idTransportista) }}</td>
-            <td>{{ p.pesoActual }}</td>
+
+            <td>{{ p.pesoActual || 0 }}</td>
+
             <td>{{ obtenerMedida() }}</td>
-            <td>{{ p.fechaRecepcion }}</td>
+
+            <td>{{ obtenerFechaParcialidad(p) }}</td>
+
+            <td>
+              <span class="badge" [ngClass]="obtenerBadgeParcialidadAgricultor(p)">
+                {{ obtenerEstadoParcialidad(p) }}
+              </span>
+            </td>
+
+            <td>{{ p.observaciones || '-' }}</td>
+
           </tr>
 
           <tr *ngIf="!loading && parcialidades.length === 0">
-            <td colspan="6" class="text-center text-muted py-4">
+            <td colspan="8" class="text-center text-muted py-4">
               Sin parcialidades registradas
             </td>
           </tr>
 
         </tbody>
+
       </table>
 
     </div>
+  </div>
+
+  <div class="alert alert-info mt-3">
+    Al crear una parcialidad, el sistema la envía al Beneficio como
+    <strong>PENDIENTE_RECEPCION</strong>. Luego Beneficio podrá verla en el detalle de la cuenta,
+    generar el QR, recibirla o rechazarla.
   </div>
 
 </div>

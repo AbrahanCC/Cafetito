@@ -14,4 +14,6 @@ public interface TransportistaRepository extends JpaRepository<Transportista, Lo
     boolean existsByCui(String cui);
 
     List<Transportista> findByAgricultor_IdAgricultorAndDisponibleTrue(Long idAgricultor);
+
+    Long countByAgricultor_IdAgricultor(Long idAgricultor);
 }

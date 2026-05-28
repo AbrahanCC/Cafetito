@@ -1,214 +1,628 @@
 <div class="container-fluid py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <!-- ========================= -->
+  <!-- VISTA LISTA DE CUENTAS -->
+  <!-- ========================= -->
+  <div *ngIf="vistaPantalla === 'LISTA'">
 
-    <div>
-      <h2 class="fw-bold mb-1">Cuentas — Beneficio</h2>
-      <p class="text-muted mb-0">
-        Apertura, cierre y confirmación de cuentas.
-      </p>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+      <div>
+        <h2 class="fw-bold mb-1">Cuentas — Beneficio</h2>
+        <p class="text-muted mb-0">
+          Apertura, cierre y confirmación de cuentas.
+        </p>
+      </div>
+
+      <button
+        class="btn btn-success"
+        (click)="nueva()"
+        [disabled]="procesandoCuenta">
+        + Nueva cuenta
+      </button>
+
     </div>
 
-    <button class="btn btn-success" (click)="nueva()">
-      + Nueva cuenta
-    </button>
+    <div class="alert alert-success" *ngIf="mensaje">
+      {{ mensaje }}
+    </div>
+
+    <div class="alert alert-danger" *ngIf="error">
+      {{ error }}
+    </div>
+
+    <!-- FILTROS -->
+    <div class="card mb-3">
+      <div class="card-body">
+
+        <h5 class="fw-bold mb-3">Filtros</h5>
+
+        <form [formGroup]="filtrosForm">
+
+          <div class="row g-3 align-items-end">
+
+            <div class="col-md-3">
+              <label class="form-label">Buscar por fecha</label>
+              <input
+                type="date"
+                class="form-control"
+                formControlName="fecha">
+            </div>
+
+            <div class="col-md-2">
+              <button
+                type="button"
+                class="btn btn-success w-100"
+                [disabled]="!filtrosForm.value.fecha"
+                (click)="buscarPorFecha()">
+                Buscar
+              </button>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Buscar por No. Cuenta</label>
+              <input
+                type="number"
+                class="form-control"
+                formControlName="noCuenta"
+                placeholder="Ej. 1">
+            </div>
+
+            <div class="col-md-2">
+              <button
+                type="button"
+                class="btn btn-success w-100"
+                [disabled]="!filtrosForm.value.noCuenta"
+                (click)="buscarPorCuenta()">
+                Buscar
+              </button>
+            </div>
+
+            <div class="col-md-3">
+              <label class="form-label">Filtrar por estado</label>
+              <input
+                class="form-control"
+                formControlName="estado"
+                placeholder="Ej. PESAJE_INICIADO">
+            </div>
+
+            <div class="col-md-2">
+              <button
+                type="button"
+                class="btn btn-success w-100"
+                [disabled]="!filtrosForm.value.estado"
+                (click)="buscarPorEstado()">
+                Buscar
+              </button>
+            </div>
+
+            <div class="col-md-2">
+              <button
+                type="button"
+                class="btn btn-secondary w-100"
+                (click)="limpiarFiltros()">
+                Limpiar filtros
+              </button>
+            </div>
+
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+    <!-- FORM CREAR CUENTA -->
+    <div class="card mb-3" *ngIf="showForm">
+
+      <div class="card-body">
+
+        <h5 class="fw-bold mb-3">Abrir nueva cuenta</h5>
+
+        <form [formGroup]="form" (ngSubmit)="guardar()">
+
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label">ID Agricultor</label>
+              <input
+                type="number"
+                class="form-control"
+                formControlName="nitAgricultor"
+                placeholder="Ej. 1">
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Peso objetivo</label>
+              <input
+                type="number"
+                step="0.01"
+                class="form-control"
+                formControlName="pesoObjetivo"
+                placeholder="Ej. 500">
+            </div>
+
+          </div>
+
+          <div class="mt-3">
+
+            <button
+              type="submit"
+              class="btn btn-success me-2"
+              [disabled]="form.invalid || procesandoCuenta">
+              {{ procesandoCuenta ? 'Guardando...' : 'Crear cuenta' }}
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              (click)="cancelar()"
+              [disabled]="procesandoCuenta">
+              Cancelar
+            </button>
+
+          </div>
+
+        </form>
+
+      </div>
+
+    </div>
+
+    <!-- TABLA CUENTAS -->
+    <div class="card shadow-sm">
+
+      <div class="card-body p-0">
+
+        <table class="table table-hover mb-0">
+
+          <thead class="table-success">
+            <tr>
+              <th>No. Cuenta</th>
+              <th>Agricultor</th>
+              <th>Peso total</th>
+              <th>Cant. Parcialidades</th>
+              <th>Fecha Envío</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngIf="loading">
+              <td colspan="7" class="text-center py-3">
+                Cargando cuentas...
+              </td>
+            </tr>
+
+            <tr *ngFor="let c of cuentasFiltradas">
+
+              <td>{{ c.idCuenta }}</td>
+
+              <td>{{ c.nitAgricultor }}</td>
+
+              <td>{{ c.pesoObjetivo || 0 }}</td>
+
+              <td>{{ c.cantidadParcialidades || 0 }}</td>
+
+              <td>{{ c.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</td>
+
+              <td>
+                <span class="badge" [ngClass]="obtenerBadgeEstadoCuenta(c.estado)">
+                  {{ c.estado }}
+                </span>
+              </td>
+
+              <td>
+                <button
+                  class="btn btn-sm btn-primary"
+                  (click)="verDetalleCuenta(c)">
+                  Ver Detalle
+                </button>
+              </td>
+
+            </tr>
+
+            <tr *ngIf="!loading && cuentasFiltradas.length === 0">
+              <td colspan="7" class="text-center text-muted py-3">
+                Sin cuentas registradas
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
 
   </div>
 
-  <div class="btn-group mb-3">
+  <!-- ========================= -->
+  <!-- VISTA DETALLE CUENTA -->
+  <!-- ========================= -->
+  <div *ngIf="vistaPantalla === 'DETALLE_CUENTA' && cuentaSeleccionada">
 
-    <button
-      class="btn"
-      [class.btn-success]="vista === 'TODAS'"
-      [class.btn-outline-success]="vista !== 'TODAS'"
-      (click)="cambiarVista('TODAS')">
-      Todas
-    </button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
-    <button
-      class="btn"
-      [class.btn-success]="vista === 'PESO_CABAL'"
-      [class.btn-outline-success]="vista !== 'PESO_CABAL'"
-      (click)="cambiarVista('PESO_CABAL')">
-      En pesaje
-    </button>
+      <div>
+        <h2 class="fw-bold mb-1">
+          Detalle Cuenta #{{ cuentaSeleccionada.idCuenta }}
+        </h2>
+        <p class="text-muted mb-0">
+          Información general de la cuenta y sus parcialidades.
+        </p>
+      </div>
 
-    <button
-      class="btn"
-      [class.btn-success]="vista === 'CERRADAS'"
-      [class.btn-outline-success]="vista !== 'CERRADAS'"
-      (click)="cambiarVista('CERRADAS')">
-      Cerradas
-    </button>
+      <button class="btn btn-secondary" (click)="regresarLista()">
+        Regresar
+      </button>
 
-    <button
-      class="btn"
-      [class.btn-success]="vista === 'CONFIRMADAS'"
-      [class.btn-outline-success]="vista !== 'CONFIRMADAS'"
-      (click)="cambiarVista('CONFIRMADAS')">
-      Confirmadas
-    </button>
+    </div>
 
-  </div>
+    <div class="alert alert-success" *ngIf="mensaje">
+      {{ mensaje }}
+    </div>
 
-  <div class="alert alert-success" *ngIf="mensaje">
-    {{ mensaje }}
-  </div>
+    <div class="alert alert-danger" *ngIf="error">
+      {{ error }}
+    </div>
 
-  <div class="alert alert-danger" *ngIf="error">
-    {{ error }}
-  </div>
-
-  <div class="card mb-3" *ngIf="showForm">
-
-    <div class="card-body">
-
-      <h5 class="fw-bold mb-3">Abrir nueva cuenta</h5>
-
-      <form [formGroup]="form" (ngSubmit)="guardar()">
+    <div class="card mb-3">
+      <div class="card-body">
 
         <div class="row g-3">
 
-          <div class="col-md-6">
-            <label class="form-label">ID/NIT Agricultor</label>
-            <input
-              type="number"
-              class="form-control"
-              formControlName="nitAgricultor"
-              placeholder="Ej. 1">
+          <div class="col-md-2">
+            <strong>No. Cuenta</strong>
+            <p>{{ cuentaSeleccionada.idCuenta }}</p>
           </div>
 
-          <div class="col-md-6">
-            <label class="form-label">Peso objetivo</label>
-            <input
-              type="number"
-              step="0.01"
-              class="form-control"
-              formControlName="pesoObjetivo"
-              placeholder="Ej. 1000">
+          <div class="col-md-2">
+            <strong>Agricultor</strong>
+            <p>{{ cuentaSeleccionada.nitAgricultor }}</p>
+          </div>
+
+          <div class="col-md-3">
+            <strong>Estado Actual</strong>
+            <p>
+              <span class="badge" [ngClass]="obtenerBadgeEstadoCuenta(cuentaSeleccionada.estado)">
+                {{ cuentaSeleccionada.estado }}
+              </span>
+            </p>
+          </div>
+
+          <div class="col-md-2">
+            <strong>Parcialidades</strong>
+            <p>{{ cuentaSeleccionada.cantidadParcialidades || 0 }}</p>
+          </div>
+
+          <div class="col-md-2">
+            <strong>Diferencia Total</strong>
+            <p>{{ cuentaSeleccionada.diferenciaTotal || 0 }}</p>
+          </div>
+
+          <div class="col-md-1">
+            <strong>Tolerancia</strong>
+            <p>{{ cuentaSeleccionada.tolerancia || 0 }}</p>
           </div>
 
         </div>
 
-        <div class="mt-3">
-
+        <div class="mt-3" *ngIf="puedeCambiarEstado(cuentaSeleccionada)">
           <button
-            type="submit"
-            class="btn btn-success me-2"
-            [disabled]="form.invalid">
-            Crear cuenta
+            class="btn btn-warning"
+            (click)="abrirCambioEstado()">
+            Cambiar Estado
           </button>
+        </div>
 
-          <button
-            type="button"
-            class="btn btn-secondary"
-            (click)="cancelar()">
-            Cancelar
-          </button>
+        <div class="mt-3" *ngIf="showCambioEstado">
+
+          <form [formGroup]="cambioEstadoForm" (ngSubmit)="cambiarEstado()">
+
+            <div class="row g-3 align-items-end">
+
+              <div class="col-md-3">
+                <label class="form-label">No. Cuenta</label>
+                <input
+                  class="form-control"
+                  [value]="cuentaSeleccionada.idCuenta"
+                  disabled>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Estado Actual</label>
+                <input
+                  class="form-control"
+                  [value]="cuentaSeleccionada.estado"
+                  disabled>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Estado Nuevo</label>
+                <select
+                  class="form-select"
+                  formControlName="estadoNuevo">
+                  <option value="">Seleccione estado</option>
+                  <option value="CUENTA_CERRADA">CUENTA_CERRADA</option>
+                  <option value="CUENTA_CONFIRMADA">CUENTA_CONFIRMADA</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <button
+                  type="submit"
+                  class="btn btn-success me-2"
+                  [disabled]="cambioEstadoForm.invalid || procesandoCuenta">
+                  {{ procesandoCuenta ? 'Cambiando...' : 'Cambiar Estado' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  (click)="cancelarCambioEstado()"
+                  [disabled]="procesandoCuenta">
+                  Cancelar
+                </button>
+              </div>
+
+            </div>
+
+          </form>
 
         </div>
 
-      </form>
+      </div>
+    </div>
 
+    <div class="card shadow-sm">
+      <div class="card-body p-0">
+
+        <table class="table table-hover mb-0">
+
+          <thead class="table-success">
+            <tr>
+              <th>ID Parcialidad</th>
+              <th>Placa Transporte</th>
+              <th>Nombre Transportista</th>
+              <th>Peso</th>
+              <th>Tipo Medida</th>
+              <th>Fecha Recepción</th>
+              <th>Estado / Detalle</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngIf="loadingParcialidades">
+              <td colspan="8" class="text-center py-3">
+                Cargando parcialidades...
+              </td>
+            </tr>
+
+            <tr *ngFor="let p of parcialidades">
+
+              <td>{{ obtenerIdParcialidadBeneficio(p) }}</td>
+
+              <td>{{ obtenerPlaca(p) }}</td>
+
+              <td>{{ obtenerNombreTransportista(p) }}</td>
+
+              <td>{{ obtenerPeso(p) }}</td>
+
+              <td>{{ obtenerTipoMedida(p) }}</td>
+
+              <td>
+                <span *ngIf="obtenerFechaRecepcion(p)">
+                  {{ obtenerFechaRecepcion(p) | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+                <span *ngIf="!obtenerFechaRecepcion(p)">-</span>
+              </td>
+
+              <td>
+                <span class="badge" [ngClass]="obtenerBadgeParcialidad(p.estado)">
+                  {{ p.estado }}
+                </span>
+                <br>
+                <small>{{ p.detalle || '-' }}</small>
+              </td>
+
+              <td>
+                <button
+                  class="btn btn-sm btn-primary"
+                  (click)="verDetalleParcialidad(p)">
+                  Ver detalle
+                </button>
+              </td>
+
+            </tr>
+
+            <tr *ngIf="!loadingParcialidades && parcialidades.length === 0">
+              <td colspan="8" class="text-center text-muted py-3">
+                Sin parcialidades registradas
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
     </div>
 
   </div>
 
-  <div class="card shadow-sm">
+  <!-- ========================= -->
+  <!-- VISTA DETALLE PARCIALIDAD -->
+  <!-- ========================= -->
+  <div *ngIf="vistaPantalla === 'DETALLE_PARCIALIDAD' && parcialidadSeleccionada">
 
-    <div class="card-body p-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
-      <table class="table table-hover mb-0">
+      <div>
+        <h2 class="fw-bold mb-1">
+          Detalle Parcialidad #{{ obtenerIdParcialidadBeneficio(parcialidadSeleccionada) }}
+        </h2>
+        <p class="text-muted mb-0">
+          Cuenta #{{ cuentaSeleccionada?.idCuenta }}
+        </p>
+      </div>
 
-        <thead class="table-success">
-          <tr>
-            <th># Cuenta</th>
-            <th>Agricultor</th>
-            <th>Objetivo</th>
-            <th>Acumulado</th>
-            <th>Báscula</th>
-            <th>Saldo</th>
-            <th>Parcialidades</th>
-            <th>Estado</th>
-            <th>Diferencia</th>
-            <th>Resultado</th>
-            <th>Fecha envío</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
+      <button
+        class="btn btn-secondary"
+        (click)="regresarDetalleCuenta()"
+        [disabled]="procesandoParcialidad">
+        Regresar
+      </button>
 
-        <tbody>
+    </div>
 
-          <tr *ngIf="loading">
-            <td colspan="12" class="text-center py-3">
-              Cargando cuentas...
-            </td>
-          </tr>
+    <div class="alert alert-success" *ngIf="mensaje">
+      {{ mensaje }}
+    </div>
 
-          <tr *ngFor="let c of cuentas">
+    <div class="alert alert-danger" *ngIf="error">
+      {{ error }}
+    </div>
 
-            <td>{{ c.idCuenta }}</td>
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body text-center">
 
-            <td>{{ c.nitAgricultor }}</td>
+        <h5 class="fw-bold mb-2">Código escaneable</h5>
 
-            <td>{{ c.pesoObjetivo || 0 }}</td>
+        <p class="text-muted mb-3">
+          Escanee el código o presione <strong>IR</strong> para abrir el detalle operativo de la parcialidad.
+        </p>
 
-            <td>{{ c.pesoAcumulado || 0 }}</td>
+        <div *ngIf="qrDataUrl; else sinQr">
 
-            <td>{{ c.pesoBasculaTotal || 0 }}</td>
+          <img
+            [src]="qrDataUrl"
+            alt="QR Parcialidad"
+            width="210"
+            height="210"
+            class="mb-3 border rounded p-2 bg-white">
 
-            <td>{{ c.saldoPendiente || 0 }}</td>
+          <div>
+            <button
+              class="btn btn-primary px-4"
+              (click)="irParcialidadQr()">
+              IR
+            </button>
+          </div>
 
-            <td>{{ c.cantidadParcialidades || 0 }}</td>
+        </div>
 
-            <td>
-              <span class="badge bg-success">
-                {{ c.estado }}
-              </span>
-            </td>
+        <ng-template #sinQr>
+          <div class="alert alert-warning mb-0">
+            No se pudo generar el QR de la parcialidad.
+          </div>
+        </ng-template>
 
-            <td>{{ c.diferenciaTotal || 0 }}</td>
+      </div>
+    </div>
 
-            <td>{{ c.resultadoTolerancia || '-' }}</td>
+    <div *ngIf="mostrarPaso17">
 
-            <td>{{ c.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</td>
+      <div class="alert alert-info">
+        Detalle operativo de la parcialidad seleccionada.
+      </div>
 
-            <td>
+      <div class="row g-3">
 
-              <button
-                class="btn btn-sm btn-warning me-1"
-                *ngIf="puedeCerrar(c)"
-                (click)="cerrarCuenta(c)">
-                Cerrar
-              </button>
+        <div class="col-md-6">
 
-              <button
-                class="btn btn-sm btn-primary"
-                *ngIf="puedeConfirmar(c)"
-                (click)="confirmarCuenta(c)">
-                Confirmar
-              </button>
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
 
-              <span
-                class="text-muted small"
-                *ngIf="!puedeCerrar(c) && !puedeConfirmar(c)">
-                Sin acción
-              </span>
+              <h5 class="fw-bold mb-3">Transporte</h5>
 
-            </td>
+              <p>
+                <strong>Placa:</strong>
+                {{ obtenerPlaca(parcialidadSeleccionada) }}
+              </p>
 
-          </tr>
+              <p>
+                <strong>Estado:</strong>
+                {{ obtenerEstadoTransporte(parcialidadSeleccionada) }}
+              </p>
 
-          <tr *ngIf="!loading && cuentas.length === 0">
-            <td colspan="12" class="text-center text-muted py-3">
-              Sin cuentas registradas
-            </td>
-          </tr>
+              <p>
+                <strong>Observaciones:</strong>
+                {{ parcialidadSeleccionada.observacionTransporte || '-' }}
+              </p>
 
-        </tbody>
+            </div>
+          </div>
 
-      </table>
+        </div>
 
+        <div class="col-md-6">
+
+          <div class="card h-100 shadow-sm">
+            <div class="card-body">
+
+              <h5 class="fw-bold mb-3">Transportista</h5>
+
+              <p>
+                <strong>CUI:</strong>
+                {{ parcialidadSeleccionada.cuiTransportista || '-' }}
+              </p>
+
+              <p>
+                <strong>Nombre:</strong>
+                {{ obtenerNombreTransportista(parcialidadSeleccionada) }}
+              </p>
+
+              <p>
+                <strong>Estado:</strong>
+                {{ obtenerEstadoTransportista(parcialidadSeleccionada) }}
+              </p>
+
+              <p>
+                <strong>Observaciones:</strong>
+                {{ parcialidadSeleccionada.observacionTransportista || '-' }}
+              </p>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="mt-3" *ngIf="puedeRecibirORechazar(parcialidadSeleccionada)">
+
+        <button
+          class="btn btn-success me-2"
+          (click)="recibirParcialidad()"
+          [disabled]="procesandoParcialidad">
+          {{ procesandoParcialidad ? 'Procesando...' : 'Recibir parcialidad' }}
+        </button>
+
+        <button
+          class="btn btn-danger"
+          (click)="rechazarParcialidad()"
+          [disabled]="procesandoParcialidad">
+          {{ procesandoParcialidad ? 'Procesando...' : 'Rechazar parcialidad' }}
+        </button>
+
+      </div>
+
+      <div
+        class="alert alert-secondary mt-3"
+        *ngIf="!puedeRecibirORechazar(parcialidadSeleccionada)">
+        Esta parcialidad ya fue procesada.
+      </div>
+
+    </div>
+
+    <div class="alert alert-warning mt-3" *ngIf="!mostrarPaso17">
+      Presione <strong>IR</strong> para continuar al detalle de transporte y transportista.
     </div>
 
   </div>

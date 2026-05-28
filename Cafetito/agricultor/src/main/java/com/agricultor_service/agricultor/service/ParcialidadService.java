@@ -1,5 +1,6 @@
 package com.agricultor_service.agricultor.service;
 
+import com.agricultor_service.agricultor.dto.ParcialidadBeneficioRequest;
 import com.agricultor_service.agricultor.model.*;
 import com.agricultor_service.agricultor.repository.*;
 import org.springframework.stereotype.Service;
@@ -19,17 +20,20 @@ public class ParcialidadService {
     private final PesajeRepository pesajeRepository;
     private final TransporteRepository transporteRepository;
     private final TransportistaRepository transportistaRepository;
+    private final BeneficioClientService beneficioClientService;
 
     public ParcialidadService(
             ParcialidadRepository parcialidadRepository,
             PesajeRepository pesajeRepository,
             TransporteRepository transporteRepository,
-            TransportistaRepository transportistaRepository
+            TransportistaRepository transportistaRepository,
+            BeneficioClientService beneficioClientService
     ) {
         this.parcialidadRepository = parcialidadRepository;
         this.pesajeRepository = pesajeRepository;
         this.transporteRepository = transporteRepository;
         this.transportistaRepository = transportistaRepository;
+        this.beneficioClientService = beneficioClientService;
     }
 
     public List<Parcialidad> listarPorPesaje(Long idPesaje) {
@@ -52,7 +56,6 @@ public class ParcialidadService {
 
         if (Boolean.FALSE.equals(transporte.getDisponible())
                 && !idPesaje.equals(transporte.getPesajeAsociado())) {
-
             throw new RuntimeException("El transporte no está disponible");
         }
 
@@ -61,15 +64,14 @@ public class ParcialidadService {
 
         if (Boolean.FALSE.equals(transportista.getDisponible())
                 && !idPesaje.equals(transportista.getPesajeAsociado())) {
-
             throw new RuntimeException("El transportista no está disponible");
         }
 
         Double factor = obtenerFactorConversion(pesaje);
-        Double pesoKg = parcialidad.getPesoActual() * factor;
+        Double pesoConvertido = parcialidad.getPesoActual() * factor;
 
         Double pesoActualRegistrado = parcialidadRepository.sumarPesoPorPesaje(idPesaje);
-        Double nuevoTotal = pesoActualRegistrado + pesoKg;
+        Double nuevoTotal = pesoActualRegistrado + pesoConvertido;
 
         Double maximoPermitido = pesaje.getPesoTotalActual() * 1.05;
 
@@ -85,7 +87,7 @@ public class ParcialidadService {
         parcialidad.setIdCuenta(pesaje.getIdCuenta());
         parcialidad.setPlaca(placa);
         parcialidad.setEstado(estado);
-        parcialidad.setPesoActual(pesoKg);
+        parcialidad.setPesoActual(pesoConvertido);
         parcialidad.setDiferenciaPeso(0.0);
         parcialidad.setFechaRecepcion(LocalDate.now());
         parcialidad.setHoraRecepcion(LocalTime.now());
@@ -100,6 +102,13 @@ public class ParcialidadService {
 
         pesajeRepository.save(pesaje);
 
+        registrarParcialidadEnBeneficio(
+                guardada,
+                pesaje,
+                transporte,
+                transportista
+        );
+
         transporte.setDisponible(true);
         transporte.setPesajeAsociado(null);
         transporteRepository.save(transporte);
@@ -111,8 +120,40 @@ public class ParcialidadService {
         return guardada;
     }
 
-    private void validarEstadoPesaje(Pesaje pesaje) {
+    private void registrarParcialidadEnBeneficio(
+            Parcialidad parcialidad,
+            Pesaje pesaje,
+            Transporte transporte,
+            Transportista transportista
+    ) {
+        ParcialidadBeneficioRequest request = new ParcialidadBeneficioRequest();
 
+        request.setCuenta(
+                new ParcialidadBeneficioRequest.CuentaRef(
+                        pesaje.getIdCuenta()
+                )
+        );
+
+        request.setIdParcialidadAgricultor(parcialidad.getIdParcialidad());
+        request.setIdPesajeAgricultor(pesaje.getIdPesaje());
+
+        request.setPlacaTransporte(transporte.getPlaca());
+        request.setEstadoTransporte(transporte.getEstado());
+        request.setObservacionTransporte(transporte.getObservaciones());
+
+        request.setCuiTransportista(transportista.getCui());
+        request.setNombreTransportista(transportista.getNombre());
+        request.setEstadoTransportista(transportista.getEstado());
+        request.setObservacionTransportista(null);
+
+        request.setPesoEnviado(parcialidad.getPesoActual());
+        request.setTipoMedida(obtenerNombreMedida(pesaje));
+        request.setObservaciones(parcialidad.getObservaciones());
+
+        beneficioClientService.registrarParcialidadEnBeneficio(request);
+    }
+
+    private void validarEstadoPesaje(Pesaje pesaje) {
         if (pesaje.getEstado() == null || pesaje.getEstado().getIdDetalleCatalogo() == null) {
             throw new RuntimeException("El pesaje no tiene estado asignado");
         }
@@ -123,7 +164,6 @@ public class ParcialidadService {
     }
 
     private void validarDatosParcialidad(Parcialidad parcialidad) {
-
         if (parcialidad.getPlaca() == null || parcialidad.getPlaca().isBlank()) {
             throw new RuntimeException("La placa del transporte es obligatoria");
         }
@@ -138,7 +178,6 @@ public class ParcialidadService {
     }
 
     private Double obtenerFactorConversion(Pesaje pesaje) {
-
         if (pesaje.getMedida() == null) {
             throw new RuntimeException("El pesaje no tiene medida asignada");
         }
@@ -156,5 +195,24 @@ public class ParcialidadService {
         if (idMedida.equals(6L)) return 0.453592;
 
         throw new RuntimeException("La medida no tiene factor de conversión configurado");
+    }
+
+    private String obtenerNombreMedida(Pesaje pesaje) {
+        if (pesaje.getMedida() == null) {
+            return "SIN_MEDIDA";
+        }
+
+        if (pesaje.getMedida().getValor() != null) {
+            return pesaje.getMedida().getValor();
+        }
+
+        Long idMedida = pesaje.getMedida().getIdDetalleCatalogo();
+
+        if (idMedida == null) return "SIN_MEDIDA";
+        if (idMedida.equals(4L)) return "QUINTAL";
+        if (idMedida.equals(5L)) return "KILOGRAMO";
+        if (idMedida.equals(6L)) return "LIBRA";
+
+        return "MEDIDA_" + idMedida;
     }
 }

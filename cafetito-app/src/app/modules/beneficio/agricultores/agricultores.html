@@ -1,65 +1,360 @@
 <div class="container-fluid py-4">
 
-  <h2 class="fw-bold mb-1">Agricultores — Beneficio</h2>
-  <p class="text-muted mb-4">
-    Consulta de agricultores registrados.
-  </p>
+  <!-- ========================= -->
+  <!-- LISTA AGRICULTORES -->
+  <!-- ========================= -->
+  <div *ngIf="vistaPantalla === 'LISTA'">
 
-  <div class="alert alert-danger" *ngIf="error">
-    {{ error }}
-  </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
 
-  <div class="card shadow-sm">
-    <div class="card-body p-0">
+      <div>
+        <h2 class="fw-bold mb-1">Agricultores — Beneficio</h2>
+        <p class="text-muted mb-0">
+          Consulta de agricultores registrados dentro del sistema.
+        </p>
+      </div>
 
-      <table class="table table-hover mb-0">
-        <thead class="table-success">
-          <tr>
-            <th>ID</th>
-            <th>NIT</th>
-            <th>Nombre</th>
-            <th>Dirección</th>
-            <th>Teléfono</th>
-            <th>Estado</th>
-            <th>Observaciones</th>
-          </tr>
-        </thead>
-
-        <tbody>
-
-          <tr *ngIf="loading">
-            <td colspan="7" class="text-center py-3">
-              Cargando agricultores...
-            </td>
-          </tr>
-
-          <tr *ngFor="let a of agricultores">
-            <td>{{ a.idAgricultor || '-' }}</td>
-            <td>{{ a.nit || a.nitAgricultor || '-' }}</td>
-            <td>{{ a.nombre || '-' }}</td>
-            <td>{{ a.direccion || '-' }}</td>
-            <td>{{ a.telefono || '-' }}</td>
-            <td>
-              <span
-                class="badge"
-                [class.bg-success]="a.activo !== false"
-                [class.bg-secondary]="a.activo === false">
-                {{ a.activo === false ? 'Inactivo' : 'Activo' }}
-              </span>
-            </td>
-            <td>{{ a.observaciones || '-' }}</td>
-          </tr>
-
-          <tr *ngIf="!loading && agricultores.length === 0">
-            <td colspan="7" class="text-center text-muted py-3">
-              Sin agricultores registrados
-            </td>
-          </tr>
-
-        </tbody>
-      </table>
+      <button
+        class="btn btn-secondary"
+        (click)="cargarDatos()"
+        [disabled]="loading">
+        {{ loading ? 'Cargando...' : 'Actualizar' }}
+      </button>
 
     </div>
+
+    <div class="alert alert-success" *ngIf="mensaje">
+      {{ mensaje }}
+    </div>
+
+    <div class="alert alert-danger" *ngIf="error">
+      {{ error }}
+    </div>
+
+    <!-- FILTROS -->
+    <div class="card mb-3">
+      <div class="card-body">
+
+        <h5 class="fw-bold mb-3">Filtros</h5>
+
+        <div class="row g-3 align-items-end">
+
+          <div class="col-md-4">
+            <label class="form-label">Buscar por NIT</label>
+            <input
+              class="form-control"
+              [(ngModel)]="filtroNit"
+              placeholder="Ingrese NIT o coincidencia">
+          </div>
+
+          <div class="col-md-2">
+            <button
+              class="btn btn-success w-100"
+              (click)="buscarPorNit()"
+              [disabled]="!filtroNit || loading">
+              Buscar
+            </button>
+          </div>
+
+          <div class="col-md-2">
+            <button
+              class="btn btn-secondary w-100"
+              (click)="limpiarFiltros()"
+              [disabled]="loading">
+              Limpiar filtros
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TABLA -->
+    <div class="card shadow-sm">
+
+      <div class="card-body p-0">
+
+        <table class="table table-hover mb-0">
+
+          <thead class="table-success">
+            <tr>
+              <th>NIT</th>
+              <th>Nombre</th>
+              <th>Observaciones</th>
+              <th>Fecha Creación</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngIf="loading">
+              <td colspan="6" class="text-center py-3">
+                Cargando agricultores...
+              </td>
+            </tr>
+
+            <tr *ngFor="let a of agricultores">
+
+              <td>{{ a.nit || a.nitAgricultor || '-' }}</td>
+
+              <td>{{ a.nombre || '-' }}</td>
+
+              <td>{{ obtenerObservaciones(a) }}</td>
+
+              <td>
+                <span *ngIf="obtenerFechaCreacion(a)">
+                  {{ obtenerFechaCreacion(a) | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+
+                <span *ngIf="!obtenerFechaCreacion(a)">
+                  -
+                </span>
+              </td>
+
+              <td>
+                <span class="badge" [ngClass]="obtenerBadgeEstado(a)">
+                  {{ obtenerEstado(a) }}
+                </span>
+              </td>
+
+              <td>
+                <button
+                  class="btn btn-sm btn-primary"
+                  (click)="verDetalle(a)">
+                  Ver detalle
+                </button>
+              </td>
+
+            </tr>
+
+            <tr *ngIf="!loading && agricultores.length === 0">
+              <td colspan="6" class="text-center text-muted py-3">
+                Sin agricultores registrados
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- ========================= -->
+  <!-- DETALLE AGRICULTOR -->
+  <!-- ========================= -->
+  <div *ngIf="vistaPantalla === 'DETALLE' && agricultorSeleccionado">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+      <div>
+        <h2 class="fw-bold mb-1">
+          Detalle Agricultor
+        </h2>
+
+        <p class="text-muted mb-0">
+          NIT:
+          <strong>{{ agricultorSeleccionado.nit || '-' }}</strong>
+          |
+          Nombre:
+          <strong>{{ agricultorSeleccionado.nombre || '-' }}</strong>
+        </p>
+      </div>
+
+      <button
+        class="btn btn-secondary"
+        (click)="regresarLista()"
+        [disabled]="loadingDetalle">
+        Regresar
+      </button>
+
+    </div>
+
+    <div class="alert alert-danger" *ngIf="error">
+      {{ error }}
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+
+        <div class="row g-3">
+
+          <div class="col-md-3">
+            <strong>ID Agricultor</strong>
+            <p>{{ agricultorSeleccionado.idAgricultor || '-' }}</p>
+          </div>
+
+          <div class="col-md-3">
+            <strong>NIT</strong>
+            <p>{{ agricultorSeleccionado.nit || '-' }}</p>
+          </div>
+
+          <div class="col-md-3">
+            <strong>Nombre</strong>
+            <p>{{ agricultorSeleccionado.nombre || '-' }}</p>
+          </div>
+
+          <div class="col-md-3">
+            <strong>Fecha Creación</strong>
+            <p>
+              <span *ngIf="agricultorSeleccionado.fechaCreacion">
+                {{ agricultorSeleccionado.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
+              </span>
+
+              <span *ngIf="!agricultorSeleccionado.fechaCreacion">
+                -
+              </span>
+            </p>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Dirección</strong>
+            <p>{{ agricultorSeleccionado.direccion || '-' }}</p>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Teléfono</strong>
+            <p>{{ agricultorSeleccionado.telefono || '-' }}</p>
+          </div>
+
+          <div class="col-md-4">
+            <strong>Observaciones</strong>
+            <p>{{ agricultorSeleccionado.observaciones || '-' }}</p>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RESUMEN DEL CASO DE USO -->
+    <div class="row g-3">
+
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body text-center">
+
+            <h5 class="fw-bold">Cuentas</h5>
+
+            <p class="display-6 fw-bold mb-0">
+              {{ obtenerCantidadCuentas() }}
+            </p>
+
+            <small class="text-muted">
+              Cantidad de cuentas registradas por el agricultor
+            </small>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body text-center">
+
+            <h5 class="fw-bold">Transportes</h5>
+
+            <p class="display-6 fw-bold mb-0">
+              {{ obtenerCantidadTransportes() }}
+            </p>
+
+            <small class="text-muted">
+              Cantidad de transportes registrados por el agricultor
+            </small>
+
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-4">
+        <div class="card shadow-sm h-100">
+          <div class="card-body text-center">
+
+            <h5 class="fw-bold">Transportistas</h5>
+
+            <p class="display-6 fw-bold mb-0">
+              {{ obtenerCantidadTransportistas() }}
+            </p>
+
+            <small class="text-muted">
+              Cantidad de transportistas registrados por el agricultor
+            </small>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CUENTAS DEL AGRICULTOR -->
+    <div class="card shadow-sm mt-3">
+      <div class="card-body p-0">
+
+        <table class="table table-hover mb-0">
+
+          <thead class="table-success">
+            <tr>
+              <th>No. Cuenta</th>
+              <th>Peso Objetivo</th>
+              <th>Peso Acumulado</th>
+              <th>Estado</th>
+              <th>Fecha Envío</th>
+            </tr>
+          </thead>
+
+          <tbody>
+
+            <tr *ngIf="loadingDetalle">
+              <td colspan="5" class="text-center py-3">
+                Cargando detalle...
+              </td>
+            </tr>
+
+            <tr *ngFor="let c of cuentasAgricultor">
+
+              <td>{{ c.idCuenta }}</td>
+
+              <td>{{ c.pesoObjetivo || 0 }}</td>
+
+              <td>{{ c.pesoAcumulado || 0 }}</td>
+
+              <td>
+                <span class="badge bg-secondary">
+                  {{ c.estado || '-' }}
+                </span>
+              </td>
+
+              <td>
+                <span *ngIf="c.fechaEnvio">
+                  {{ c.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+
+                <span *ngIf="!c.fechaEnvio">
+                  -
+                </span>
+              </td>
+
+            </tr>
+
+            <tr *ngIf="!loadingDetalle && cuentasAgricultor.length === 0">
+              <td colspan="5" class="text-center text-muted py-3">
+                Este agricultor no tiene cuentas registradas
+              </td>
+            </tr>
+
+          </tbody>
+
+        </table>
+
+      </div>
+    </div>
+
   </div>
 
 </div>

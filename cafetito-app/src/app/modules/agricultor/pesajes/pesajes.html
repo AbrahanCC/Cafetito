@@ -24,6 +24,27 @@
       <form [formGroup]="form" (ngSubmit)="guardar()">
 
         <div class="mb-3">
+          <label class="form-label">Cuenta</label>
+
+          <select class="form-select" formControlName="idCuenta">
+            <option value="">Seleccione una cuenta</option>
+
+            <option
+              *ngFor="let c of cuentasDisponibles"
+              [value]="c.idCuenta">
+              Cuenta #{{ c.idCuenta }} —
+              Objetivo: {{ c.pesoObjetivo || 0 }} —
+              Pendiente: {{ c.saldoPendiente || 0 }} —
+              Estado: {{ c.estado }}
+            </option>
+          </select>
+
+          <div class="form-text">
+            Solo aparecen cuentas creadas o en pesaje iniciado.
+          </div>
+        </div>
+
+        <div class="mb-3">
           <label class="form-label">Estado</label>
           <input class="form-control" value="Pesaje Iniciado" disabled>
         </div>
@@ -115,13 +136,15 @@
 
             <td>{{ p.idPesaje }}</td>
 
-            <td>{{ p.noCuenta || 'Sin cuenta' }}</td>
+            <td>
+              {{ p.idCuenta || p.noCuenta || 'Sin cuenta' }}
+            </td>
 
             <td>{{ p.pesoTotalActual }}</td>
 
             <td>{{ p.cantidadParcialidades || 0 }}</td>
 
-            <td>{{ p.fecha }}</td>
+            <td>{{ p.fecha | date:'dd/MM/yyyy HH:mm' }}</td>
 
             <td>
               <span class="badge bg-success">

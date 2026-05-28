@@ -8,7 +8,10 @@
       </p>
     </div>
 
-    <button class="btn btn-success" (click)="nuevo()">
+    <button
+      class="btn btn-success"
+      (click)="nuevo()"
+      [disabled]="procesando">
       + Crear Transporte
     </button>
   </div>
@@ -32,7 +35,16 @@
 
           <div class="col-md-4">
             <label class="form-label">Placa</label>
-            <input class="form-control" formControlName="placa" placeholder="Ej. P123ABC">
+            <input
+              class="form-control"
+              formControlName="placa"
+              placeholder="Ej. P123ABC">
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('placa')?.invalid && form.get('placa')?.touched">
+              La placa es obligatoria.
+            </div>
           </div>
 
           <div class="col-md-4">
@@ -43,6 +55,12 @@
                 {{ m.nombre }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('marca')?.invalid && form.get('marca')?.touched">
+              Debe seleccionar una marca.
+            </div>
           </div>
 
           <div class="col-md-4">
@@ -53,6 +71,12 @@
                 {{ c.nombre }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('color')?.invalid && form.get('color')?.touched">
+              Debe seleccionar un color.
+            </div>
           </div>
 
           <div class="col-md-4">
@@ -63,6 +87,12 @@
                 {{ l.nombre }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('linea')?.invalid && form.get('linea')?.touched">
+              Debe seleccionar una línea.
+            </div>
           </div>
 
           <div class="col-md-4">
@@ -73,23 +103,41 @@
                 {{ m.nombre }}
               </option>
             </select>
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="form.get('modelo')?.invalid && form.get('modelo')?.touched">
+              Debe seleccionar un modelo.
+            </div>
           </div>
 
           <div class="col-md-4">
             <label class="form-label">Observaciones</label>
-            <input class="form-control" formControlName="observaciones">
+            <input
+              class="form-control"
+              formControlName="observaciones"
+              placeholder="Observaciones opcionales">
           </div>
 
         </div>
 
         <div class="mt-3">
-          <button type="submit" class="btn btn-success me-2" [disabled]="form.invalid">
-            Crear
+
+          <button
+            type="submit"
+            class="btn btn-success me-2"
+            [disabled]="form.invalid || procesando">
+            {{ procesando ? 'Guardando...' : 'Crear' }}
           </button>
 
-          <button type="button" class="btn btn-secondary" (click)="cancelar()">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="cancelar()"
+            [disabled]="procesando">
             Cancelar
           </button>
+
         </div>
 
       </form>
@@ -101,6 +149,7 @@
     <div class="card-body p-0">
 
       <table class="table table-hover mb-0">
+
         <thead class="table-success">
           <tr>
             <th>Placa</th>
@@ -124,19 +173,40 @@
           </tr>
 
           <tr *ngFor="let t of transportes">
+
             <td>{{ t.placa }}</td>
+
             <td>{{ t.marca?.nombre || '-' }}</td>
+
             <td>{{ t.color?.nombre || '-' }}</td>
+
             <td>{{ t.linea?.nombre || '-' }}</td>
+
             <td>{{ t.modelo?.nombre || '-' }}</td>
+
             <td>
-              <span class="badge bg-success">
+              <span
+                class="badge"
+                [class.bg-success]="t.estado === 1"
+                [class.bg-secondary]="t.estado === 0"
+                [class.bg-dark]="t.estado !== 1 && t.estado !== 0">
                 {{ obtenerEstado(t.estado) }}
               </span>
             </td>
-            <td>{{ obtenerDisponible(t.disponible) }}</td>
+
+            <td>
+              <span
+                class="badge"
+                [class.bg-success]="t.disponible"
+                [class.bg-warning]="!t.disponible">
+                {{ obtenerDisponible(t.disponible) }}
+              </span>
+            </td>
+
             <td>{{ t.pesajeAsociado || 'Sin pesaje' }}</td>
+
             <td>{{ t.observaciones || '-' }}</td>
+
           </tr>
 
           <tr *ngIf="!loading && transportes.length === 0">
@@ -146,6 +216,7 @@
           </tr>
 
         </tbody>
+
       </table>
 
     </div>

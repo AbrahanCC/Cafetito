@@ -19,24 +19,23 @@ export class BeneficioService {
   private readonly API_CUENTAS = 'http://localhost:8090/api/cuentas';
   private readonly API_PARCIALIDADES = 'http://localhost:8090/api/parcialidades';
   private readonly API_TRANSITOS = 'http://localhost:8090/api/transitos';
-  private readonly API_AGRICULTORES = 'http://localhost:8090/api/agricultor';
+
+  /*
+   * Este apunta al micro Agricultor por medio del API Gateway.
+   * Backend nuevo:
+   * GET /api/agricultor/agricultores
+   * GET /api/agricultor/agricultores/{idAgricultor}/detalle
+   */
+  private readonly API_AGRICULTORES = 'http://localhost:8090/api/agricultor/agricultores';
 
   constructor(private http: HttpClient) {}
 
+  // =========================
+  // CUENTAS
+  // =========================
+
   listarCuentas(): Observable<Cuenta[]> {
     return this.http.get<Cuenta[]>(this.API_CUENTAS);
-  }
-
-  listarCuentasPesoCabal(): Observable<Cuenta[]> {
-    return this.http.get<Cuenta[]>(`${this.API_CUENTAS}/peso-cabal`);
-  }
-
-  listarCuentasCerradas(): Observable<Cuenta[]> {
-    return this.http.get<Cuenta[]>(`${this.API_CUENTAS}/cerradas`);
-  }
-
-  listarCuentasConfirmadas(): Observable<Cuenta[]> {
-    return this.http.get<Cuenta[]>(`${this.API_CUENTAS}/confirmadas`);
   }
 
   obtenerCuenta(idCuenta: number): Observable<Cuenta> {
@@ -57,11 +56,39 @@ export class BeneficioService {
     );
   }
 
+  listarCuentasPorAgricultor(idAgricultor: number): Observable<Cuenta[]> {
+    return this.http.get<Cuenta[]>(
+      `${this.API_CUENTAS}/agricultor/${idAgricultor}`
+    );
+  }
+
+  // =========================
+  // PARCIALIDADES
+  // =========================
+
   listarParcialidadesPorCuenta(idCuenta: number): Observable<Parcialidad[]> {
     return this.http.get<Parcialidad[]>(
       `${this.API_PARCIALIDADES}/cuenta/${idCuenta}`
     );
   }
+
+  recibirParcialidad(idParcialidad: number): Observable<Parcialidad> {
+    return this.http.put<Parcialidad>(
+      `${this.API_PARCIALIDADES}/${idParcialidad}/recibir`,
+      {}
+    );
+  }
+
+  rechazarParcialidad(idParcialidad: number): Observable<Parcialidad> {
+    return this.http.put<Parcialidad>(
+      `${this.API_PARCIALIDADES}/${idParcialidad}/rechazar`,
+      {}
+    );
+  }
+
+  // =========================
+  // TRANSPORTES / TRANSPORTISTAS EN BENEFICIO
+  // =========================
 
   listarTransportes(): Observable<Transporte[]> {
     return this.http.get<Transporte[]>(this.API_TRANSITOS);
@@ -71,7 +98,23 @@ export class BeneficioService {
     return this.http.get<Transportista[]>(this.API_TRANSITOS);
   }
 
+  // =========================
+  // AGRICULTORES
+  // =========================
+
   listarAgricultores(): Observable<Agricultor[]> {
     return this.http.get<Agricultor[]>(this.API_AGRICULTORES);
+  }
+
+  buscarAgricultoresPorNit(nit: string): Observable<Agricultor[]> {
+    return this.http.get<Agricultor[]>(
+      `${this.API_AGRICULTORES}?nit=${encodeURIComponent(nit)}`
+    );
+  }
+
+  obtenerDetalleAgricultor(idAgricultor: number): Observable<any> {
+    return this.http.get<any>(
+      `${this.API_AGRICULTORES}/${idAgricultor}/detalle`
+    );
   }
 }

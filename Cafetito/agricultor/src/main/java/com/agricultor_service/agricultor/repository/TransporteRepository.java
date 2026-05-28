@@ -17,4 +17,6 @@ public interface TransporteRepository extends JpaRepository<Transporte, Long> {
     List<Transporte> findByAgricultor_IdAgricultorAndDisponibleTrue(Long idAgricultor);
 
     Optional<Transporte> findByPlaca(String placa);
+
+    Long countByAgricultor_IdAgricultor(Long idAgricultor);
 }

@@ -3,6 +3,7 @@ package com.agricultor_service.agricultor.config;
 import com.agricultor_service.agricultor.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,18 +30,35 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/actuator/**")
+                        .permitAll()
+
+                        /*
+                         * Beneficio puede consultar agricultores.
+                         * Agricultor también puede consultar si se necesita.
+                         */
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/agricultor/agricultores/**"
+                        )
+                        .hasAnyAuthority("ROLE_1", "ROLE_3")
 
                         .requestMatchers("/api/agricultor/catalogos/**")
                         .hasAnyAuthority("ROLE_1", "ROLE_2", "ROLE_3")
 
+                        /*
+                         * El resto del micro agricultor sigue siendo solo para Agricultor.
+                         */
                         .requestMatchers("/api/agricultor/**")
                         .hasAuthority("ROLE_3")
 
                         .anyRequest()
                         .authenticated()
                 )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(
+                        jwtFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
 
         return http.build();
     }

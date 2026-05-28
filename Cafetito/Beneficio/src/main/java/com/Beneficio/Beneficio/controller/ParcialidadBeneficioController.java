@@ -20,57 +20,79 @@ public class ParcialidadBeneficioController {
     private final ParcialidadBeneficioService parcialidadService;
 
     @GetMapping("/cuenta/{idCuenta}")
-    public ResponseEntity<List<ParcialidadBeneficio>> listar(
-            @PathVariable Long idCuenta) {
-
-        return ResponseEntity.ok(
-                parcialidadService.listarPorCuenta(idCuenta)
-        );
+    public ResponseEntity<List<ParcialidadBeneficio>> listar(@PathVariable Long idCuenta) {
+        return ResponseEntity.ok(parcialidadService.listarPorCuenta(idCuenta));
     }
 
     @PostMapping("/interno")
-    public ResponseEntity<?> recibir(
-            @RequestBody ParcialidadBeneficio parcialidad,
-            @AuthenticationPrincipal UserDetails user) {
-
+    public ResponseEntity<?> registrarDesdeMicroAgricultor(
+            @RequestBody ParcialidadBeneficio parcialidad
+    ) {
         try {
+            return ResponseEntity.ok(
+                    parcialidadService.registrarDesdeMicroAgricultor(
+                            parcialidad,
+                            "micro-agricultor"
+                    )
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 
-            String usuario =
-                    user != null
-                            ? user.getUsername()
-                            : "micro-agricultor";
+    @PutMapping("/{idParcialidad}/recibir")
+    public ResponseEntity<?> recibirDesdeBeneficio(
+            @PathVariable Long idParcialidad,
+            @AuthenticationPrincipal UserDetails user
+    ) {
+        try {
+            String usuario = user != null ? user.getUsername() : "beneficio";
 
             return ResponseEntity.ok(
-                    parcialidadService.recibir(
-                            parcialidad,
+                    parcialidadService.recibirDesdeBeneficio(
+                            idParcialidad,
                             usuario
                     )
             );
-
         } catch (RuntimeException e) {
-
             return ResponseEntity
                     .status(HttpStatus.CONFLICT)
-                    .body(
-                            Map.of(
-                                    "error",
-                                    e.getMessage()
-                            )
-                    );
-
+                    .body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-
             return ResponseEntity
                     .internalServerError()
-                    .body(
-                            Map.of(
-                                    "error",
-                                    e.getMessage()
-                            )
-                    );
-
+                    .body(Map.of("error", e.getMessage()));
         }
-
     }
 
+    @PutMapping("/{idParcialidad}/rechazar")
+    public ResponseEntity<?> rechazarDesdeBeneficio(
+            @PathVariable Long idParcialidad,
+            @AuthenticationPrincipal UserDetails user
+    ) {
+        try {
+            String usuario = user != null ? user.getUsername() : "beneficio";
+
+            return ResponseEntity.ok(
+                    parcialidadService.rechazarDesdeBeneficio(
+                            idParcialidad,
+                            usuario
+                    )
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity
+                    .internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 }

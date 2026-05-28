@@ -23,22 +23,19 @@ export class AuthGuard implements CanActivate {
     state: RouterStateSnapshot
   ): boolean {
 
-    // Verifica token
     const token = this.authService.token;
 
     if (!token) {
+      localStorage.setItem('redirect_after_login', state.url);
       this.router.navigate(['/login']);
       return false;
     }
 
-    // Obtiene roles permitidos
     const allowedRoles = route.data['roles'];
-
-    // Rol actual
     const currentRol = this.authService.rol;
 
-    // Validar rol
     if (allowedRoles && !allowedRoles.includes(currentRol)) {
+      localStorage.setItem('redirect_after_login', state.url);
       this.router.navigate(['/login']);
       return false;
     }

@@ -19,9 +19,7 @@ export class PesocabalService {
   constructor(private http: HttpClient) {}
 
   listarCuentas(): Observable<Cuenta[]> {
-    return this.http.get<Cuenta[]>(
-      `${this.API_CUENTAS}/peso-cabal`
-    );
+    return this.http.get<Cuenta[]>(`${this.API_CUENTAS}/peso-cabal`);
   }
 
   listarPendientes(): Observable<Parcialidad[]> {
@@ -44,11 +42,11 @@ export class PesocabalService {
 
   actualizarPeso(
     idParcialidad: number,
-    data: ActualizarPesoBasculaRequest
+    request: ActualizarPesoBasculaRequest
   ): Observable<Parcialidad> {
     return this.http.put<Parcialidad>(
       `${this.API_PESO_CABAL}/parcialidades/${idParcialidad}/peso`,
-      data
+      request
     );
   }
 

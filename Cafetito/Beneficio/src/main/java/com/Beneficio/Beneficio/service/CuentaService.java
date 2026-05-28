@@ -151,15 +151,37 @@ public class CuentaService {
             throw new RuntimeException("Debe indicar el nuevo estado");
         }
 
+        if (!PESAJE_FINALIZADO.equals(cuenta.getEstado())
+                && !CUENTA_CERRADA.equals(cuenta.getEstado())) {
+
+            throw new RuntimeException(
+                    "Solo se puede cambiar estado si la cuenta está en Pesaje Finalizado o Cuenta Cerrada"
+            );
+        }
+
+        if (nuevoEstado.equals(cuenta.getEstado())) {
+            throw new RuntimeException("El nuevo estado no puede ser igual al estado actual");
+        }
+
+        if (!CUENTA_CERRADA.equals(nuevoEstado)
+                && !CUENTA_CONFIRMADA.equals(nuevoEstado)) {
+
+            throw new RuntimeException("Estado nuevo no permitido");
+        }
+
         cuenta.setEstado(nuevoEstado);
 
         if (CUENTA_CERRADA.equals(nuevoEstado)) {
             cuenta.setFechaLlegada(LocalDateTime.now());
         }
 
-        cuenta.setDiferenciaTotal(
-                diferenciaTotal != null ? diferenciaTotal : 0.0
-        );
+        if (CUENTA_CONFIRMADA.equals(nuevoEstado)) {
+            actualizarResultadoTolerancia(cuenta);
+        } else {
+            cuenta.setDiferenciaTotal(
+                    diferenciaTotal != null ? diferenciaTotal : cuenta.getDiferenciaTotal()
+            );
+        }
 
         Cuenta actualizada = cuentaRepository.save(cuenta);
 
@@ -178,5 +200,119 @@ public class CuentaService {
         );
 
         return actualizada;
+    }
+
+    @Transactional
+    public Cuenta marcarPesajeIniciado(Long idCuenta, String usuario) {
+
+        Cuenta cuenta =
+                cuentaRepository.findById(idCuenta)
+                        .orElseThrow(() ->
+                                new RuntimeException("Cuenta no encontrada")
+                        );
+
+        if ("CUENTA_CERRADA".equals(cuenta.getEstado())
+                || "CUENTA_CONFIRMADA".equals(cuenta.getEstado())
+                || "PESAJE_FINALIZADO".equals(cuenta.getEstado())) {
+
+            throw new RuntimeException(
+                    "La cuenta no admite nuevos pesajes"
+            );
+        }
+
+        if ("CUENTA_CREADA".equals(cuenta.getEstado())) {
+
+            cuenta.setEstado("PESAJE_INICIADO");
+
+            Cuenta actualizada =
+                    cuentaRepository.save(cuenta);
+
+            historialService.registrarCambio(
+                    actualizada,
+                    actualizada.getEstado(),
+                    actualizada.getDiferenciaTotal(),
+                    actualizada.getTolerancia()
+            );
+
+            bitacoraService.registrarOperacion(
+                    "INICIAR_PESAJE_CUENTA",
+                    usuario,
+                    actualizada.getIdCuenta(),
+                    "Cuenta marcada como pesaje iniciado"
+            );
+
+            return actualizada;
+        }
+
+        return cuenta;
+    }
+
+    @Transactional
+    public Cuenta marcarPesajeFinalizado(Long idCuenta, String usuario) {
+
+        Cuenta cuenta =
+                cuentaRepository.findById(idCuenta)
+                        .orElseThrow(() ->
+                                new RuntimeException("Cuenta no encontrada")
+                        );
+
+        if (!"PESAJE_INICIADO".equals(cuenta.getEstado())) {
+
+            throw new RuntimeException(
+                    "Solo se puede finalizar una cuenta en pesaje iniciado"
+            );
+        }
+
+        cuenta.setEstado("PESAJE_FINALIZADO");
+
+        Cuenta actualizada =
+                cuentaRepository.save(cuenta);
+
+        historialService.registrarCambio(
+                actualizada,
+                actualizada.getEstado(),
+                actualizada.getDiferenciaTotal(),
+                actualizada.getTolerancia()
+        );
+
+        bitacoraService.registrarOperacion(
+                "FINALIZAR_PESAJE_CUENTA",
+                usuario,
+                actualizada.getIdCuenta(),
+                "Cuenta marcada como pesaje finalizado"
+        );
+
+        return actualizada;
+    }
+
+    private void actualizarResultadoTolerancia(Cuenta cuenta) {
+
+        Double pesoObjetivo =
+                cuenta.getPesoObjetivo() == null
+                        ? 0.0
+                        : cuenta.getPesoObjetivo();
+
+        Double pesoBascula =
+                cuenta.getPesoBasculaTotal() == null
+                        ? 0.0
+                        : cuenta.getPesoBasculaTotal();
+
+        Double tolerancia =
+                cuenta.getTolerancia() == null
+                        ? TOLERANCIA_DEFAULT
+                        : cuenta.getTolerancia();
+
+        Double diferencia =
+                pesoBascula - pesoObjetivo;
+
+        cuenta.setDiferenciaTotal(diferencia);
+
+        if (Math.abs(diferencia) <= tolerancia) {
+            cuenta.setResultadoTolerancia("ACEPTADO_EN_PARAMETRO");
+        } else if (diferencia < 0) {
+            cuenta.setResultadoTolerancia("FALTANTE");
+        } else {
+            cuenta.setResultadoTolerancia("SOBRANTE");
+        }
     }
 }

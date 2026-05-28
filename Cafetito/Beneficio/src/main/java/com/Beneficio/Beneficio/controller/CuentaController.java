@@ -82,6 +82,41 @@ public class CuentaController {
         );
     }
 
+    @PutMapping("/interno/{id}/iniciar-pesaje")
+    public ResponseEntity<Cuenta> iniciarPesajeInterno(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                cuentaService.marcarPesajeIniciado(
+                        id,
+                        "micro-agricultor"
+                )
+        );
+    }
+
+    @PutMapping("/interno/{id}/finalizar-pesaje")
+    public ResponseEntity<Cuenta> finalizarPesajeInterno(@PathVariable Long id) {
+        return ResponseEntity.ok(
+                cuentaService.marcarPesajeFinalizado(
+                        id,
+                        "micro-agricultor"
+                )
+        );
+    }
+
+
+    @GetMapping("/interno/{id}")
+    public ResponseEntity<Cuenta> obtenerInterno(@PathVariable Long id) {
+        return cuentaService.obtener(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/interno/agricultor/{idAgricultor}")
+    public ResponseEntity<List<Cuenta>> listarPorAgricultorInterno(@PathVariable Long idAgricultor) {
+        return ResponseEntity.ok(
+                cuentaService.listarPorAgricultor(idAgricultor)
+        );
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<Cuenta> actualizar(@PathVariable Long id,
                                              @RequestBody Cuenta cuenta,

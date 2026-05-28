@@ -1,12 +1,21 @@
 <div class="container-fluid py-4">
 
   <div class="d-flex justify-content-between align-items-center mb-4">
+
     <div>
       <h2 class="fw-bold mb-1">Peso Cabal</h2>
       <p class="text-muted mb-0">
-        Registro de peso báscula, parcialidades y boletas.
+        Registro de peso báscula, parcialidades pesadas y boletas.
       </p>
     </div>
+
+    <button
+      class="btn btn-secondary"
+      (click)="cambiarVista(vista)"
+      [disabled]="loading || procesando">
+      {{ loading ? 'Cargando...' : 'Actualizar' }}
+    </button>
+
   </div>
 
   <div class="btn-group mb-3">
@@ -15,7 +24,8 @@
       class="btn"
       [class.btn-success]="vista === 'CUENTAS'"
       [class.btn-outline-success]="vista !== 'CUENTAS'"
-      (click)="cambiarVista('CUENTAS')">
+      (click)="cambiarVista('CUENTAS')"
+      [disabled]="loading || procesando">
       Cuentas
     </button>
 
@@ -23,7 +33,8 @@
       class="btn"
       [class.btn-success]="vista === 'PENDIENTES'"
       [class.btn-outline-success]="vista !== 'PENDIENTES'"
-      (click)="cambiarVista('PENDIENTES')">
+      (click)="cambiarVista('PENDIENTES')"
+      [disabled]="loading || procesando">
       Pendientes
     </button>
 
@@ -31,7 +42,8 @@
       class="btn"
       [class.btn-success]="vista === 'PESADAS'"
       [class.btn-outline-success]="vista !== 'PESADAS'"
-      (click)="cambiarVista('PESADAS')">
+      (click)="cambiarVista('PESADAS')"
+      [disabled]="loading || procesando">
       Pesadas
     </button>
 
@@ -39,7 +51,8 @@
       class="btn"
       [class.btn-success]="vista === 'BOLETAS'"
       [class.btn-outline-success]="vista !== 'BOLETAS'"
-      (click)="cambiarVista('BOLETAS')">
+      (click)="cambiarVista('BOLETAS')"
+      [disabled]="loading || procesando">
       Boletas
     </button>
 
@@ -53,33 +66,56 @@
     {{ error }}
   </div>
 
-  <div class="card mb-3" *ngIf="parcialidadSeleccionada">
+  <!-- FORMULARIO REGISTRAR PESO -->
+  <div class="card mb-3 shadow-sm" *ngIf="parcialidadSeleccionada">
 
     <div class="card-body">
 
       <h5 class="fw-bold mb-3">
-        Registrar peso — Parcialidad #{{ parcialidadSeleccionada.idParcialidadBeneficio }}
+        Registrar peso — Parcialidad #{{ obtenerIdParcialidad(parcialidadSeleccionada) }}
       </h5>
 
       <form [formGroup]="pesoForm" (ngSubmit)="actualizarPeso()">
 
         <div class="row g-3">
 
-          <div class="col-md-4">
-            <label class="form-label">Peso enviado</label>
+          <div class="col-md-3">
+            <label class="form-label">Cuenta</label>
             <input
               class="form-control"
-              [value]="parcialidadSeleccionada.pesoEnviado"
+              [value]="obtenerCuentaParcialidad(parcialidadSeleccionada)"
               disabled>
           </div>
 
-          <div class="col-md-4">
+          <div class="col-md-3">
+            <label class="form-label">Placa</label>
+            <input
+              class="form-control"
+              [value]="parcialidadSeleccionada.placaTransporte || '-'"
+              disabled>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Peso enviado</label>
+            <input
+              class="form-control"
+              [value]="parcialidadSeleccionada.pesoEnviado || 0"
+              disabled>
+          </div>
+
+          <div class="col-md-3">
             <label class="form-label">Peso báscula</label>
             <input
               type="number"
               step="0.01"
               class="form-control"
               formControlName="pesoBascula">
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="pesoForm.get('pesoBascula')?.invalid && pesoForm.get('pesoBascula')?.touched">
+              El peso báscula debe ser mayor a 0.
+            </div>
           </div>
 
           <div class="col-md-4">
@@ -87,9 +123,15 @@
             <input
               class="form-control"
               formControlName="tipoMedida">
+
+            <div
+              class="text-danger small mt-1"
+              *ngIf="pesoForm.get('tipoMedida')?.invalid && pesoForm.get('tipoMedida')?.touched">
+              El tipo de medida es obligatorio.
+            </div>
           </div>
 
-          <div class="col-12">
+          <div class="col-md-8">
             <label class="form-label">Observaciones</label>
             <textarea
               class="form-control"
@@ -105,14 +147,15 @@
           <button
             type="submit"
             class="btn btn-success me-2"
-            [disabled]="pesoForm.invalid">
-            Guardar peso
+            [disabled]="pesoForm.invalid || procesando">
+            {{ procesando ? 'Guardando...' : 'Guardar peso' }}
           </button>
 
           <button
             type="button"
             class="btn btn-secondary"
-            (click)="cancelar()">
+            (click)="cancelar()"
+            [disabled]="procesando">
             Cancelar
           </button>
 
@@ -124,6 +167,7 @@
 
   </div>
 
+  <!-- CUENTAS -->
   <div class="card shadow-sm" *ngIf="vista === 'CUENTAS'">
 
     <div class="card-body p-0">
@@ -133,11 +177,12 @@
         <thead class="table-success">
           <tr>
             <th># Cuenta</th>
-            <th>NIT Agricultor</th>
+            <th>Agricultor</th>
             <th>Objetivo</th>
             <th>Acumulado</th>
             <th>Báscula</th>
             <th>Estado</th>
+            <th>Resultado</th>
             <th>Fecha envío</th>
           </tr>
         </thead>
@@ -145,27 +190,42 @@
         <tbody>
 
           <tr *ngIf="loading">
-            <td colspan="7" class="text-center py-3">
+            <td colspan="8" class="text-center py-3">
               Cargando cuentas...
             </td>
           </tr>
 
           <tr *ngFor="let c of cuentas">
+
             <td>{{ c.idCuenta }}</td>
+
             <td>{{ c.nitAgricultor }}</td>
+
             <td>{{ c.pesoObjetivo || 0 }}</td>
+
             <td>{{ c.pesoAcumulado || 0 }}</td>
+
             <td>{{ c.pesoBasculaTotal || 0 }}</td>
+
             <td>
-              <span class="badge bg-success">
-                {{ c.estado }}
+              <span class="badge" [ngClass]="obtenerBadgeEstadoCuenta(c.estado)">
+                {{ c.estado || '-' }}
               </span>
             </td>
-            <td>{{ c.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</td>
+
+            <td>{{ c.resultadoTolerancia || '-' }}</td>
+
+            <td>
+              <span *ngIf="c.fechaEnvio">
+                {{ c.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}
+              </span>
+              <span *ngIf="!c.fechaEnvio">-</span>
+            </td>
+
           </tr>
 
           <tr *ngIf="!loading && cuentas.length === 0">
-            <td colspan="7" class="text-center text-muted py-3">
+            <td colspan="8" class="text-center text-muted py-3">
               Sin cuentas disponibles para Peso Cabal
             </td>
           </tr>
@@ -178,6 +238,7 @@
 
   </div>
 
+  <!-- PARCIALIDADES -->
   <div class="card shadow-sm" *ngIf="vista !== 'CUENTAS'">
 
     <div class="card-body p-0">
@@ -209,16 +270,16 @@
 
           <tr *ngFor="let p of parcialidades">
 
-            <td>{{ p.idParcialidadBeneficio }}</td>
+            <td>{{ obtenerIdParcialidad(p) }}</td>
 
-            <td>{{ p.cuenta?.idCuenta }}</td>
+            <td>{{ obtenerCuentaParcialidad(p) }}</td>
 
-            <td>{{ p.placaTransporte }}</td>
+            <td>{{ p.placaTransporte || '-' }}</td>
 
             <td>
-              {{ p.nombreTransportista }}
+              {{ p.nombreTransportista || '-' }}
               <br>
-              <small class="text-muted">{{ p.cuiTransportista }}</small>
+              <small class="text-muted">{{ p.cuiTransportista || '-' }}</small>
             </td>
 
             <td>{{ p.pesoEnviado || 0 }}</td>
@@ -228,14 +289,11 @@
             <td>{{ p.diferenciaPeso ?? '-' }}</td>
 
             <td>
-              <span
-                class="badge"
-                [ngClass]="{
-                'bg-secondary': p.estado==='RECIBIDA',
-                'bg-success': p.estado==='PESAJE_REALIZADO'
-                }">
-                {{p.estado}}
-                </span>
+              <span class="badge" [ngClass]="obtenerBadgeEstadoParcialidad(p.estado)">
+                {{ p.estado || '-' }}
+              </span>
+              <br>
+              <small>{{ p.detalle || '-' }}</small>
             </td>
 
             <td>
@@ -252,16 +310,24 @@
               <button
                 *ngIf="vista === 'PENDIENTES'"
                 class="btn btn-sm btn-success me-1"
-                (click)="seleccionarParcialidad(p)">
+                (click)="seleccionarParcialidad(p)"
+                [disabled]="procesando">
                 Registrar peso
               </button>
 
               <button
-                *ngIf="vista === 'PESADAS' && !p.boleta"
+                *ngIf="vista === 'PESADAS' && puedeGenerarBoleta(p)"
                 class="btn btn-sm btn-primary"
-                (click)="generarBoleta(p)">
-                Generar boleta
+                (click)="generarBoleta(p)"
+                [disabled]="procesando">
+                {{ procesando ? 'Procesando...' : 'Generar boleta' }}
               </button>
+
+              <span
+                *ngIf="vista === 'BOLETAS' || p.boleta"
+                class="text-muted">
+                -
+              </span>
 
             </td>
 

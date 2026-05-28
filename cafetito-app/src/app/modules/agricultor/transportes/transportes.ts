@@ -2,7 +2,14 @@
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
-import {  Marca, Color, Linea, Modelo, Transporte} from '../../../core/models/models';
+import {
+  Marca,
+  Color,
+  Linea,
+  Modelo,
+  Transporte
+} from '../../../core/models/models';
+
 import { CatalogosService } from '../../../core/services/catalogos';
 
 @Component({
@@ -22,6 +29,8 @@ export class TransportesAgricultorComponent implements OnInit {
 
   loading = false;
   showForm = false;
+  procesando = false;
+
   error = '';
   mensajeExito = '';
 
@@ -55,12 +64,22 @@ export class TransportesAgricultorComponent implements OnInit {
       next: data => {
         this.marcas = data || [];
         this.cdr.detectChanges();
+      },
+      error: () => {
+        this.marcas = [];
+        this.error = 'No se pudieron cargar las marcas.';
+        this.cdr.detectChanges();
       }
     });
 
     this.catalogosService.listarColores().subscribe({
       next: data => {
         this.colores = data || [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.colores = [];
+        this.error = 'No se pudieron cargar los colores.';
         this.cdr.detectChanges();
       }
     });
@@ -69,12 +88,22 @@ export class TransportesAgricultorComponent implements OnInit {
       next: data => {
         this.lineas = data || [];
         this.cdr.detectChanges();
+      },
+      error: () => {
+        this.lineas = [];
+        this.error = 'No se pudieron cargar las líneas.';
+        this.cdr.detectChanges();
       }
     });
 
     this.catalogosService.listarModelos().subscribe({
       next: data => {
         this.modelos = data || [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.modelos = [];
+        this.error = 'No se pudieron cargar los modelos.';
         this.cdr.detectChanges();
       }
     });
@@ -94,10 +123,7 @@ export class TransportesAgricultorComponent implements OnInit {
       error: err => {
         this.transportes = [];
         this.loading = false;
-        this.error =
-          err?.error?.error ||
-          err?.error?.mensaje ||
-          'No se pudieron cargar los transportes';
+        this.error = this.obtenerMensajeError(err, 'No se pudieron cargar los transportes.');
         this.cdr.detectChanges();
       }
     });
@@ -107,17 +133,32 @@ export class TransportesAgricultorComponent implements OnInit {
     this.showForm = true;
     this.error = '';
     this.mensajeExito = '';
-    this.form.reset();
+    this.form.reset({
+      placa: '',
+      marca: '',
+      color: '',
+      linea: '',
+      modelo: '',
+      observaciones: ''
+    });
   }
 
   guardar(): void {
+    if (this.procesando) {
+      return;
+    }
+
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
+    this.error = '';
+    this.mensajeExito = '';
+    this.procesando = true;
+
     const body = {
-      placa: this.form.value.placa,
+      placa: String(this.form.value.placa || '').trim().toUpperCase(),
       marca: {
         idCatalogo: Number(this.form.value.marca)
       },
@@ -130,32 +171,35 @@ export class TransportesAgricultorComponent implements OnInit {
       modelo: {
         idCatalogo: Number(this.form.value.modelo)
       },
-      observaciones: this.form.value.observaciones
+      observaciones: this.form.value.observaciones || ''
     };
 
     this.http.post(this.apiUrl, body).subscribe({
       next: () => {
+        this.procesando = false;
         this.showForm = false;
         this.form.reset();
-        this.mensajeExito = 'Transporte creado correctamente';
+        this.mensajeExito = 'Transporte creado correctamente.';
         this.cargarDatos();
       },
       error: err => {
-        this.error =
-          err?.error?.error ||
-          err?.error?.mensaje ||
-          'Error al guardar transporte';
+        this.procesando = false;
+        this.error = this.obtenerMensajeError(err, 'Error al guardar transporte.');
         this.cdr.detectChanges();
       }
     });
   }
 
   cancelar(): void {
+    if (this.procesando) {
+      return;
+    }
+
     this.showForm = false;
     this.form.reset();
   }
 
-    obtenerEstado(estado?: number): string {
+  obtenerEstado(estado?: number): string {
     if (estado === 1) {
       return 'Activo';
     }
@@ -169,5 +213,12 @@ export class TransportesAgricultorComponent implements OnInit {
 
   obtenerDisponible(disponible?: boolean): string {
     return disponible ? 'Sí' : 'No';
+  }
+
+  obtenerMensajeError(err: any, mensajeDefault: string): string {
+    return err?.error?.mensaje ||
+           err?.error?.error ||
+           err?.message ||
+           mensajeDefault;
   }
 }
