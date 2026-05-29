@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 
 @Component({
+  standalone: false,
   selector: 'app-dashboard-agricultor',
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css']

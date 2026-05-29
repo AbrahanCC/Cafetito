@@ -2,6 +2,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
+
 import {
   Cuenta,
   Parcialidad,
@@ -13,8 +15,11 @@ import {
 })
 export class PesocabalService {
 
-  private readonly API_CUENTAS = 'http://localhost:8090/api/cuentas';
-  private readonly API_PESO_CABAL = 'http://localhost:8090/api/peso-cabal';
+  private readonly API_CUENTAS =
+    `${environment.apiGatewayUrl}${environment.endpoints.cuentas}`;
+
+  private readonly API_PESO_CABAL =
+    `${environment.apiGatewayUrl}${environment.endpoints.pesocabal}`;
 
   constructor(private http: HttpClient) {}
 

@@ -20,6 +20,7 @@
 
     <div class="col-md-4">
       <div class="dashboard-card">
+
         <div class="card-icon">⚖️</div>
 
         <h4>Pesajes</h4>
@@ -28,14 +29,19 @@
           Crear pesajes, registrar parcialidades y consultar el avance de tus envíos.
         </p>
 
-        <a class="btn btn-dashboard" routerLink="/agricultor/pesajes">
+        <button
+          type="button"
+          class="btn btn-dashboard"
+          (click)="irPesajes()">
           Entrar
-        </a>
+        </button>
+
       </div>
     </div>
 
     <div class="col-md-4">
       <div class="dashboard-card">
+
         <div class="card-icon">🚛</div>
 
         <h4>Transportes</h4>
@@ -44,14 +50,19 @@
           Registrar y administrar los vehículos disponibles para el traslado.
         </p>
 
-        <a class="btn btn-dashboard" routerLink="/agricultor/transportes">
+        <button
+          type="button"
+          class="btn btn-dashboard"
+          (click)="irTransportes()">
           Entrar
-        </a>
+        </button>
+
       </div>
     </div>
 
     <div class="col-md-4">
       <div class="dashboard-card">
+
         <div class="card-icon">🪪</div>
 
         <h4>Transportistas</h4>
@@ -60,9 +71,13 @@
           Registrar pilotos y controlar su disponibilidad dentro del proceso.
         </p>
 
-        <a class="btn btn-dashboard" routerLink="/agricultor/transportistas">
+        <button
+          type="button"
+          class="btn btn-dashboard"
+          (click)="irTransportistas()">
           Entrar
-        </a>
+        </button>
+
       </div>
     </div>
 

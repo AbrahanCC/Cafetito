@@ -43,6 +43,7 @@
   transition: all 0.22s ease;
   position: relative;
   overflow: hidden;
+  z-index: 1;
 }
 
 .dashboard-card::before {
@@ -54,6 +55,13 @@
   height: 110px;
   border-radius: 50%;
   background: rgba(31, 111, 58, 0.12);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dashboard-card > * {
+  position: relative;
+  z-index: 2;
 }
 
 .dashboard-card:hover {

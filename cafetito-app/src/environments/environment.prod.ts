@@ -1,7 +1,7 @@
 export const environment = {
-  production: false,
+  production: true,
 
-  apiGatewayUrl: 'http://localhost:8090',
+  apiGatewayUrl: 'https://TU-API-GATEWAY.onrender.com',
 
   endpoints: {
     auth: '/api/auth',

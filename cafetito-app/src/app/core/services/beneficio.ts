@@ -2,6 +2,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
+
 import {
   Cuenta,
   Parcialidad,
@@ -16,17 +18,17 @@ import {
 })
 export class BeneficioService {
 
-  private readonly API_CUENTAS = 'http://localhost:8090/api/cuentas';
-  private readonly API_PARCIALIDADES = 'http://localhost:8090/api/parcialidades';
-  private readonly API_TRANSITOS = 'http://localhost:8090/api/transitos';
+  private readonly API_CUENTAS =
+    `${environment.apiGatewayUrl}${environment.endpoints.cuentas}`;
 
-  /*
-   * Este apunta al micro Agricultor por medio del API Gateway.
-   * Backend nuevo:
-   * GET /api/agricultor/agricultores
-   * GET /api/agricultor/agricultores/{idAgricultor}/detalle
-   */
-  private readonly API_AGRICULTORES = 'http://localhost:8090/api/agricultor/agricultores';
+  private readonly API_PARCIALIDADES =
+    `${environment.apiGatewayUrl}${environment.endpoints.parcialidades}`;
+
+  private readonly API_TRANSITOS =
+    `${environment.apiGatewayUrl}${environment.endpoints.transitos}`;
+
+  private readonly API_AGRICULTORES =
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/agricultores`;
 
   constructor(private http: HttpClient) {}
 
