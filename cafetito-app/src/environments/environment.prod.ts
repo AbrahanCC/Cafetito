@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
 
-  apiGatewayUrl: 'https://TU-API-GATEWAY.onrender.com',
+  apiGatewayUrl: 'https://cafetito-api-gateway.onrender.com',
 
   endpoints: {
     auth: '/api/auth',
