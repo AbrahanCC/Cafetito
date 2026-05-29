@@ -2,6 +2,8 @@
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
+import { environment } from '../../../../environments/environment';
+
 import {
   Licencia,
   Transportista
@@ -29,7 +31,8 @@ export class TransportistasAgricultorComponent implements OnInit {
 
   form: FormGroup;
 
-  private apiUrl = 'http://localhost:8090/api/agricultor/transportistas';
+  private readonly apiUrl =
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/transportistas`;
 
   constructor(
     private http: HttpClient,

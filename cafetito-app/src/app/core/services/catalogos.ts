@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-
+import { environment } from '../../../environments/environment';
 import {
   DetalleCatalogo,
   Marca,
@@ -16,8 +16,7 @@ import {
 })
 export class CatalogosService {
 
-  private readonly API_URL =
-    'http://localhost:8090/api/agricultor/catalogos';
+  private apiUrl = `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/catalogos`;
 
   constructor(
     private http: HttpClient
@@ -29,7 +28,7 @@ export class CatalogosService {
     return this.http.get<
       DetalleCatalogo[]
     >(
-      `${this.API_URL}/medidas`
+      `${this.apiUrl}/medidas`
     );
 
   }
@@ -40,7 +39,7 @@ export class CatalogosService {
     return this.http.get<
       DetalleCatalogo[]
     >(
-      `${this.API_URL}/estados-pesaje`
+      `${this.apiUrl}/estados-pesaje`
     );
 
   }
@@ -51,7 +50,7 @@ export class CatalogosService {
     return this.http.get<
       Marca[]
     >(
-      `${this.API_URL}/marcas`
+      `${this.apiUrl}/marcas`
     );
 
   }
@@ -62,7 +61,7 @@ export class CatalogosService {
     return this.http.get<
       Color[]
     >(
-      `${this.API_URL}/colores`
+      `${this.apiUrl}/colores`
     );
 
   }
@@ -73,7 +72,7 @@ export class CatalogosService {
     return this.http.get<
       Linea[]
     >(
-      `${this.API_URL}/lineas`
+      `${this.apiUrl}/lineas`
     );
 
   }
@@ -84,7 +83,7 @@ export class CatalogosService {
     return this.http.get<
       Modelo[]
     >(
-      `${this.API_URL}/modelos`
+      `${this.apiUrl}/modelos`
     );
 
   }
@@ -95,7 +94,7 @@ export class CatalogosService {
     return this.http.get<
       Licencia[]
     >(
-      `${this.API_URL}/licencias`
+      `${this.apiUrl}/licencias`
     );
 
   }

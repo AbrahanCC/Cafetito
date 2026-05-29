@@ -3,6 +3,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 
+import { environment } from '../../../../environments/environment';
+
 @Component({
   selector: 'app-parcialidades',
   standalone: false,
@@ -29,9 +31,14 @@ export class Parcialidades implements OnInit {
 
   form: FormGroup;
 
-  private apiPesajes = 'http://localhost:8090/api/agricultor/pesajes';
-  private apiTransportes = 'http://localhost:8090/api/agricultor/transportes/disponibles';
-  private apiTransportistas = 'http://localhost:8090/api/agricultor/transportistas/disponibles';
+  private readonly apiPesajes =
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/pesajes`;
+
+  private readonly apiTransportes =
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/transportes/disponibles`;
+
+  private readonly apiTransportistas =
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/transportistas/disponibles`;
 
   constructor(
     private route: ActivatedRoute,

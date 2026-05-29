@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { environment } from '../../../environments/environment';
 import { Pesaje } from '../models/models';
 
 @Injectable({
@@ -10,10 +11,10 @@ import { Pesaje } from '../models/models';
 export class PesajesService {
 
   private readonly API_URL =
-    'http://localhost:8090/api/agricultor/pesajes';
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/pesajes`;
 
   private readonly API_CUENTAS =
-    'http://localhost:8090/api/agricultor/cuentas';
+    `${environment.apiGatewayUrl}${environment.endpoints.agricultor}/cuentas`;
 
   constructor(
     private http: HttpClient
