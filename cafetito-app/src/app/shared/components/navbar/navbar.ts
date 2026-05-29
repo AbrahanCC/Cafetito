@@ -1,5 +1,7 @@
-﻿import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+﻿import { Component, OnDestroy, OnInit } from '@angular/core';
+import { NavigationEnd, Router } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
+
 import { AuthService } from '../../../core/services/auth';
 import { Rol } from '../../../core/models/models';
 
@@ -9,12 +11,15 @@ import { Rol } from '../../../core/models/models';
   templateUrl: './navbar.html',
   styleUrls: ['./navbar.css']
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
 
   tabs: { label: string; ruta: string }[] = [];
 
   nombreUsuario = '';
   rolLabel = '';
+  rutaActual = '';
+
+  private routerSub?: Subscription;
 
   constructor(
     public authService: AuthService,
@@ -25,10 +30,25 @@ export class NavbarComponent implements OnInit {
     const user = this.authService.currentUser;
     const rol = this.authService.rol;
 
-    this.nombreUsuario = user?.usuario || 'Usuario';
+    this.nombreUsuario =
+      user?.usuario ||
+      'Usuario';
+
     this.rolLabel = this.obtenerRolLabel(rol);
 
     this.cargarTabs(rol);
+
+    this.rutaActual = this.router.url.split('?')[0];
+
+    this.routerSub = this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        this.rutaActual = event.urlAfterRedirects.split('?')[0];
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
   }
 
   cargarTabs(rol: Rol | null): void {
@@ -82,12 +102,11 @@ export class NavbarComponent implements OnInit {
     return 'Sin rol';
   }
 
-  isActive(ruta: string): boolean {
-    return this.router.url === ruta;
+  estaActivo(ruta: string): boolean {
+    return this.rutaActual === ruta || this.rutaActual.startsWith(`${ruta}/`);
   }
 
   cerrarSesion(): void {
     this.authService.logout();
-    this.router.navigate(['/login']);
   }
 }

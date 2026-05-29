@@ -269,6 +269,283 @@ export class CuentasPesoCabalComponent implements OnInit {
     });
   }
 
+  descargarBoleta(parcialidad: Parcialidad): void {
+    const idParcialidad = this.obtenerIdParcialidad(parcialidad);
+    const idCuenta = this.obtenerCuentaParcialidad(parcialidad);
+
+    const contenido = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Boleta Parcialidad ${idParcialidad}</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      color: #222;
+    }
+
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #198754;
+      padding-bottom: 15px;
+      margin-bottom: 25px;
+    }
+
+    .header h1 {
+      margin: 0;
+      color: #198754;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section h3 {
+      background: #d1e7dd;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    td,
+    th {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .footer {
+      margin-top: 60px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .firma {
+      width: 40%;
+      text-align: center;
+      border-top: 1px solid #000;
+      padding-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="header">
+    <h1>Cafetito</h1>
+    <h2>Boleta de Peso Cabal</h2>
+  </div>
+
+  <div class="section">
+    <h3>Datos de la parcialidad</h3>
+
+    <table>
+      <tr>
+        <th>No. Parcialidad</th>
+        <td>${idParcialidad || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>No. Cuenta</th>
+        <td>${idCuenta || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>Estado</th>
+        <td>${parcialidad.estado || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>Detalle</th>
+        <td>${parcialidad.detalle || '-'}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Transporte y transportista</h3>
+
+    <table>
+      <tr>
+        <th>Placa</th>
+        <td>${parcialidad.placaTransporte || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>Transportista</th>
+        <td>${parcialidad.nombreTransportista || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>CUI</th>
+        <td>${parcialidad.cuiTransportista || '-'}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h3>Pesos</h3>
+
+    <table>
+      <tr>
+        <th>Peso enviado</th>
+        <td>${parcialidad.pesoEnviado || 0}</td>
+      </tr>
+
+      <tr>
+        <th>Peso báscula</th>
+        <td>${parcialidad.pesoBascula || 0}</td>
+      </tr>
+
+      <tr>
+        <th>Diferencia</th>
+        <td>${parcialidad.diferenciaPeso ?? 0}</td>
+      </tr>
+
+      <tr>
+        <th>Tipo medida</th>
+        <td>${parcialidad.tipoMedida || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>Fecha peso báscula</th>
+        <td>${parcialidad.fechaPesoBascula || '-'}</td>
+      </tr>
+
+      <tr>
+        <th>Fecha boleta</th>
+        <td>${parcialidad.fechaBoleta || '-'}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="footer">
+    <div class="firma">
+      Firma Peso Cabal
+    </div>
+
+    <div class="firma">
+      Firma Beneficio
+    </div>
+  </div>
+
+</body>
+</html>
+`;
+
+    const blob = new Blob([contenido], {
+      type: 'text/html;charset=utf-8'
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `boleta-parcialidad-${idParcialidad || 'sin-id'}.html`;
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+  }
+
+  imprimirBoleta(parcialidad: Parcialidad): void {
+    const idParcialidad = this.obtenerIdParcialidad(parcialidad);
+    const idCuenta = this.obtenerCuentaParcialidad(parcialidad);
+
+    const ventana = window.open('', '_blank');
+
+    if (!ventana) {
+      this.error = 'No se pudo abrir la ventana de impresión.';
+      return;
+    }
+
+    ventana.document.write(`
+<html>
+  <head>
+    <title>Boleta Parcialidad ${idParcialidad}</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+      }
+
+      h1,
+      h2 {
+        text-align: center;
+      }
+
+      h1 {
+        color: #198754;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .firmas {
+        margin-top: 70px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .firma {
+        width: 40%;
+        text-align: center;
+        border-top: 1px solid #000;
+        padding-top: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <h1>Cafetito</h1>
+    <h2>Boleta de Peso Cabal</h2>
+
+    <table>
+      <tr><th>No. Parcialidad</th><td>${idParcialidad || '-'}</td></tr>
+      <tr><th>No. Cuenta</th><td>${idCuenta || '-'}</td></tr>
+      <tr><th>Placa</th><td>${parcialidad.placaTransporte || '-'}</td></tr>
+      <tr><th>Transportista</th><td>${parcialidad.nombreTransportista || '-'}</td></tr>
+      <tr><th>CUI</th><td>${parcialidad.cuiTransportista || '-'}</td></tr>
+      <tr><th>Peso enviado</th><td>${parcialidad.pesoEnviado || 0}</td></tr>
+      <tr><th>Peso báscula</th><td>${parcialidad.pesoBascula || 0}</td></tr>
+      <tr><th>Diferencia</th><td>${parcialidad.diferenciaPeso ?? 0}</td></tr>
+      <tr><th>Estado</th><td>${parcialidad.estado || '-'}</td></tr>
+      <tr><th>Detalle</th><td>${parcialidad.detalle || '-'}</td></tr>
+      <tr><th>Fecha boleta</th><td>${parcialidad.fechaBoleta || '-'}</td></tr>
+    </table>
+
+    <div class="firmas">
+      <div class="firma">Firma Peso Cabal</div>
+      <div class="firma">Firma Beneficio</div>
+    </div>
+
+  </body>
+</html>
+    `);
+
+    ventana.document.close();
+    ventana.print();
+  }
+
   obtenerIdParcialidad(p: Parcialidad | null): number | null {
     return p?.idParcialidadBeneficio || p?.idParcialidad || null;
   }

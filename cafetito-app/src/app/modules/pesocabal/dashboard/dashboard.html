@@ -1,30 +1,45 @@
-<div class="container-fluid py-4">
+<div class="dashboard-page">
 
-  <h1 class="mb-2">Panel de Peso Cabal</h1>
+  <div class="dashboard-hero mb-4">
 
-  <p class="text-muted mb-4">
-    Desde aquí puedes registrar pesos de báscula y generar boletas.
-  </p>
+    <div>
+      <span class="dashboard-pill">Módulo Peso Cabal</span>
+
+      <h1 class="dashboard-title">
+        Panel de Peso Cabal
+      </h1>
+
+      <p class="dashboard-subtitle">
+        Registra pesos de báscula, consulta parcialidades pesadas y genera boletas.
+      </p>
+    </div>
+
+  </div>
 
   <div class="row g-4">
 
     <div class="col-md-4" *ngFor="let item of tarjetas">
 
-      <div class="card dashboard-card h-100">
+      <div class="dashboard-card">
 
-        <div class="card-body">
-
-          <h4 class="card-title">{{ item.titulo }}</h4>
-
-          <p class="card-text text-muted">
-            {{ item.descripcion }}
-          </p>
-
-          <a class="btn btn-success" [routerLink]="item.ruta" [queryParams]="item.queryParams">
-            Entrar
-            </a>
-
+        <div class="card-icon">
+          <span *ngIf="item.titulo === 'Cuentas'">📄</span>
+          <span *ngIf="item.titulo === 'Parcialidades pendientes'">⚖️</span>
+          <span *ngIf="item.titulo === 'Boletas'">🧾</span>
         </div>
+
+        <h4>{{ item.titulo }}</h4>
+
+        <p>
+          {{ item.descripcion }}
+        </p>
+
+        <a
+          class="btn btn-dashboard"
+          [routerLink]="item.ruta"
+          [queryParams]="item.queryParams">
+          Entrar
+        </a>
 
       </div>
 

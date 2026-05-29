@@ -1,25 +1,71 @@
-<div class="dashboard-container">
-  <h1>Panel del Agricultor</h1>
-  <p>
-    Bienvenido al módulo de agricultor. Desde aquí puedes gestionar tus procesos principales.
-  </p>
+<div class="dashboard-page">
 
-  <div class="cards">
+  <div class="dashboard-hero mb-4">
 
-    <div class="card" (click)="irPesajes()">
-      <h2>Pesajes</h2>
-      <p>Crear y consultar pesajes.</p>
-    </div>
+    <div>
+      <span class="dashboard-pill">Módulo Agricultor</span>
 
-    <div class="card" (click)="irTransportes()">
-      <h2>Transportes</h2>
-      <p>Registrar y administrar vehículos.</p>
-    </div>
+      <h1 class="dashboard-title">
+        Panel del Agricultor
+      </h1>
 
-    <div class="card" (click)="irTransportistas()">
-      <h2>Transportistas</h2>
-      <p>Registrar y administrar pilotos.</p>
+      <p class="dashboard-subtitle">
+        Gestiona tus pesajes, vehículos y transportistas para enviar parcialidades al beneficio.
+      </p>
     </div>
 
   </div>
+
+  <div class="row g-4">
+
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <div class="card-icon">⚖️</div>
+
+        <h4>Pesajes</h4>
+
+        <p>
+          Crear pesajes, registrar parcialidades y consultar el avance de tus envíos.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/agricultor/pesajes">
+          Entrar
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <div class="card-icon">🚛</div>
+
+        <h4>Transportes</h4>
+
+        <p>
+          Registrar y administrar los vehículos disponibles para el traslado.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/agricultor/transportes">
+          Entrar
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <div class="card-icon">🪪</div>
+
+        <h4>Transportistas</h4>
+
+        <p>
+          Registrar pilotos y controlar su disponibilidad dentro del proceso.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/agricultor/transportistas">
+          Entrar
+        </a>
+      </div>
+    </div>
+
+  </div>
+
 </div>

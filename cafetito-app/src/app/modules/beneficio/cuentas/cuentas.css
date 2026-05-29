@@ -1,26 +1,61 @@
 .card {
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 8px 22px rgba(43, 27, 18, 0.13);
+}
+
+.card-body {
+  border-radius: 16px;
+}
+
+.table {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .table th {
-  font-weight: 600;
+  font-weight: 700;
   white-space: nowrap;
+  color: #173b25;
+  background: #d8eadc !important;
+  border-bottom: 2px solid #1f6f3a;
 }
 
 .table td {
   vertical-align: middle;
 }
 
+.table tbody tr:hover {
+  background: #fffaf2;
+}
+
 .badge {
-  font-size: 0.85rem;
-  padding: 0.45rem 0.65rem;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 .form-label {
-  font-weight: 600;
+  font-weight: 700;
+  color: #2e3b2f;
+}
+
+.form-control,
+.form-select {
+  border-radius: 12px;
 }
 
 .btn {
-  border-radius: 8px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.alert {
+  border-radius: 14px;
+}
+
+img[alt="QR Parcialidad"] {
+  border-radius: 14px;
+  box-shadow: 0 8px 20px rgba(43, 27, 18, 0.18);
 }

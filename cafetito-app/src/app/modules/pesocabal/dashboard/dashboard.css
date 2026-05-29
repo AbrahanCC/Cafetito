@@ -1,10 +1,99 @@
+.dashboard-page {
+  padding: 2rem 0.7rem;
+}
+
+.dashboard-hero {
+  padding: 1.5rem 1.7rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 26px rgba(43, 27, 18, 0.12);
+}
+
+.dashboard-pill {
+  display: inline-block;
+  background: linear-gradient(135deg, #1f6f3a, #5b3a25);
+  color: white;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.7rem;
+}
+
+.dashboard-title {
+  font-size: 2.1rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+  color: #1f2d20;
+}
+
+.dashboard-subtitle {
+  margin: 0;
+  color: #4b5b4d;
+  font-size: 1rem;
+}
+
 .dashboard-card {
-  border: none;
-  border-radius: 14px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+  min-height: 240px;
+  padding: 1.5rem;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(43, 27, 18, 0.13);
+  transition: all 0.22s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: rgba(31, 111, 58, 0.12);
 }
 
 .dashboard-card:hover {
-  transform: translateY(-3px);
-  transition: 0.2s ease-in-out;
+  transform: translateY(-6px);
+  box-shadow: 0 18px 36px rgba(43, 27, 18, 0.2);
+}
+
+.card-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 1.8rem;
+  background: #d8eadc;
+  margin-bottom: 1rem;
+}
+
+.dashboard-card h4 {
+  font-weight: 800;
+  color: #3b2418;
+  margin-bottom: 0.5rem;
+}
+
+.dashboard-card p {
+  color: #526052;
+  min-height: 60px;
+  margin-bottom: 1.2rem;
+}
+
+.btn-dashboard {
+  background: linear-gradient(135deg, #1f6f3a, #5b3a25);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  font-weight: 700;
+  padding: 0.45rem 1.2rem;
+}
+
+.btn-dashboard:hover {
+  color: white;
+  background: linear-gradient(135deg, #0f3d22, #2b1b12);
 }

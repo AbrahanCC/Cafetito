@@ -1,33 +1,54 @@
 <nav class="navbar navbar-expand-lg navbar-dark cafetito-navbar">
   <div class="container-fluid px-4">
 
-    <a class="navbar-brand fw-bold fs-5" href="#">☕ Cafetito</a>
+    <a class="navbar-brand fw-bold fs-5" routerLink="/">
+      ☕ Cafetito
+    </a>
 
-    <button class="navbar-toggler d-lg-none" type="button"
-      data-bs-toggle="collapse" data-bs-target="#navbarMain">
+    <button
+      class="navbar-toggler d-lg-none"
+      type="button"
+      data-bs-toggle="collapse"
+      data-bs-target="#navbarMain">
       <span class="navbar-toggler-icon"></span>
     </button>
 
     <div class="collapse navbar-collapse" id="navbarMain">
+
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
         <li class="nav-item" *ngFor="let tab of tabs">
-          <a class="nav-link px-3 py-2"
-            [class.active]="isActive(tab.ruta)"
-            [href]="tab.ruta">
+          <a
+            class="nav-link px-3 py-2"
+            [class.active]="estaActivo(tab.ruta)"
+            [routerLink]="tab.ruta">
             {{ tab.label }}
           </a>
         </li>
+
       </ul>
 
       <div class="d-flex align-items-center gap-3">
+
         <div class="text-end d-none d-lg-block">
-          <div class="text-white fw-semibold small">{{ nombreUsuario }}</div>
-          <div class="badge bg-warning text-dark">{{ rolLabel }}</div>
+          <div class="text-white fw-semibold small">
+            {{ nombreUsuario }}
+          </div>
+
+          <div class="badge bg-warning text-dark">
+            {{ rolLabel }}
+          </div>
         </div>
-        <button class="btn btn-outline-light btn-sm" (click)="cerrarSesion()">
+
+        <button
+          class="btn btn-outline-light btn-sm"
+          type="button"
+          (click)="cerrarSesion()">
           Cerrar Sesión
         </button>
+
       </div>
+
     </div>
 
   </div>

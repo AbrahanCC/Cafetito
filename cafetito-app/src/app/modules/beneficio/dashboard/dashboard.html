@@ -1,34 +1,85 @@
-<div class="container-fluid py-4">
+<div class="dashboard-page">
 
-  <h1 class="mb-2">Panel del Beneficio</h1>
+  <div class="dashboard-hero mb-4">
 
-  <p class="text-muted mb-4">
-    Desde aquí puedes administrar cuentas, agricultores, transportes y validaciones.
-  </p>
+    <div>
+      <span class="dashboard-pill">Módulo Beneficio</span>
+
+      <h1 class="dashboard-title">
+        Panel del Beneficio
+      </h1>
+
+      <p class="dashboard-subtitle">
+        Administra cuentas, agricultores, transportes y validaciones del proceso Cafetito.
+      </p>
+    </div>
+
+  </div>
 
   <div class="row g-4">
 
-    <div class="col-md-4" *ngFor="let item of tarjetas">
+    <div class="col-md-6 col-xl-3">
+      <div class="dashboard-card">
+        <div class="card-icon">📄</div>
 
-      <div class="card dashboard-card h-100">
+        <h4>Cuentas</h4>
 
-        <div class="card-body">
+        <p>
+          Crear, cerrar y confirmar cuentas de agricultores.
+        </p>
 
-          <h4 class="card-title">{{ item.titulo }}</h4>
-
-          <p class="card-text text-muted">
-            {{ item.descripcion }}
-          </p>
-
-          <!-- Use normal href to avoid needing RouterModule in this template's module -->
-          <a class="btn btn-success" href="{{ item.ruta }}">
-            Entrar
-          </a>
-
-        </div>
-
+        <a class="btn btn-dashboard" routerLink="/beneficio/cuentas">
+          Entrar
+        </a>
       </div>
+    </div>
 
+    <div class="col-md-6 col-xl-3">
+      <div class="dashboard-card">
+        <div class="card-icon">🚚</div>
+
+        <h4>Transportes</h4>
+
+        <p>
+          Consultar transportes asociados a parcialidades.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/beneficio/transportes">
+          Entrar
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="dashboard-card">
+        <div class="card-icon">👤</div>
+
+        <h4>Transportistas</h4>
+
+        <p>
+          Revisar pilotos registrados en tránsito.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/beneficio/transportistas">
+          Entrar
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+      <div class="dashboard-card">
+        <div class="card-icon">🌱</div>
+
+        <h4>Agricultores</h4>
+
+        <p>
+          Buscar agricultores y revisar su detalle operativo.
+        </p>
+
+        <a class="btn btn-dashboard" routerLink="/beneficio/agricultores">
+          Entrar
+        </a>
+      </div>
     </div>
 
   </div>

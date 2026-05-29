@@ -323,8 +323,26 @@
                 {{ procesando ? 'Procesando...' : 'Generar boleta' }}
               </button>
 
+              <div *ngIf="p.boleta" class="d-flex gap-1">
+
+                <button
+                  class="btn btn-sm btn-outline-primary"
+                  (click)="descargarBoleta(p)"
+                  [disabled]="procesando">
+                  Descargar
+                </button>
+
+                <button
+                  class="btn btn-sm btn-outline-secondary"
+                  (click)="imprimirBoleta(p)"
+                  [disabled]="procesando">
+                  Imprimir
+                </button>
+
+              </div>
+
               <span
-                *ngIf="vista === 'BOLETAS' || p.boleta"
+                *ngIf="!p.boleta && vista === 'BOLETAS'"
                 class="text-muted">
                 -
               </span>
