@@ -26,7 +26,7 @@ export class AuthGuard implements CanActivate {
     const token = this.authService.token;
 
     if (!token) {
-      localStorage.setItem('redirect_after_login', state.url);
+      sessionStorage.setItem('redirect_after_login', state.url);
       this.router.navigate(['/login']);
       return false;
     }
@@ -35,7 +35,7 @@ export class AuthGuard implements CanActivate {
     const currentRol = this.authService.rol;
 
     if (allowedRoles && !allowedRoles.includes(currentRol)) {
-      localStorage.setItem('redirect_after_login', state.url);
+      sessionStorage.setItem('redirect_after_login', state.url);
       this.router.navigate(['/login']);
       return false;
     }

@@ -24,32 +24,32 @@ export class AuthService {
       .post<LoginResponse>(`${this.API}/login`, credentials)
       .pipe(
         tap(response => {
-          localStorage.clear();
+          sessionStorage.clear();
 
-          localStorage.setItem('cafetito_user', JSON.stringify(response));
-          localStorage.setItem('cafetito_token', response.token);
-          localStorage.setItem('cafetito_rol', String(response.rol));
-          localStorage.setItem('cafetito_idAgricultor', String(response.idAgricultor ?? ''));
+          sessionStorage.setItem('cafetito_user', JSON.stringify(response));
+          sessionStorage.setItem('cafetito_token', response.token);
+          sessionStorage.setItem('cafetito_rol', String(response.rol));
+          sessionStorage.setItem('cafetito_idAgricultor', String(response.idAgricultor ?? ''));
         })
       );
   }
 
   logout(): void {
-    localStorage.clear();
+    sessionStorage.clear();
     this.router.navigate(['/login']);
   }
 
   get currentUser(): LoginResponse | null {
-    const data = localStorage.getItem('cafetito_user');
+    const data = sessionStorage.getItem('cafetito_user');
     return data ? JSON.parse(data) : null;
   }
 
   get token(): string | null {
-    return localStorage.getItem('cafetito_token');
+    return sessionStorage.getItem('cafetito_token');
   }
 
   get rol(): Rol | null {
-    const rawRol = localStorage.getItem('cafetito_rol') || this.currentUser?.rol;
+    const rawRol = sessionStorage.getItem('cafetito_rol') || this.currentUser?.rol;
 
     if (rawRol === null || rawRol === undefined) {
       return null;

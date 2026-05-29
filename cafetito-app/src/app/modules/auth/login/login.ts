@@ -49,10 +49,10 @@ export class LoginComponent {
       next: () => {
         this.cargando = false;
 
-        const redirect = localStorage.getItem('redirect_after_login');
+        const redirect = sessionStorage.getItem('redirect_after_login');
 
         if (redirect) {
-          localStorage.removeItem('redirect_after_login');
+          sessionStorage.removeItem('redirect_after_login');
           this.router.navigateByUrl(redirect);
           return;
         }
