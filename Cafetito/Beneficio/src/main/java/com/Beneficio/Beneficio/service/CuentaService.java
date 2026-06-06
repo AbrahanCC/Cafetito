@@ -18,16 +18,7 @@ public class CuentaService {
     private final HistorialCuentaService historialService;
     private final BitacoraService bitacoraService;
 
-    /*
-     * Regla correcta:
-     * La tolerancia NO es 5 fijo.
-     * La tolerancia es +-5% del peso objetivo de la cuenta.
-     *
-     * Ejemplo:
-     * Peso objetivo: 500
-     * Tolerancia permitida: 500 * 0.05 = 25
-     * Rango válido: 475 a 525
-     */
+//porcentaje
     private static final double PORCENTAJE_TOLERANCIA = 0.05;
 
     private static final String CUENTA_CREADA = "CUENTA_CREADA";
@@ -278,8 +269,7 @@ public class CuentaService {
         );
 
         /*
-         * Conservamos el nombre del método porque ya lo consume el micro Agricultor,
-         * pero alineamos el estado con la regla de negocio:
+         * nombre del método porque ya lo consume el micro Agricultor,
          *
          * CUENTA_CREADA -> CUENTA_ABIERTA
          *
