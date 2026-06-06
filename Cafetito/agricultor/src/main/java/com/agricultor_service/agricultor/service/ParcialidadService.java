@@ -54,6 +54,14 @@ public class ParcialidadService {
         Transporte transporte = transporteRepository.findByPlaca(placa)
                 .orElseThrow(() -> new RuntimeException("Transporte no encontrado"));
 
+        /*
+         * Regla de negocio:
+         * Si el transporte no está disponible y está asociado a otro pesaje,
+         * no se puede usar.
+         *
+         * Si está asociado al mismo pesaje, se permite porque forma parte del
+         * mismo proceso.
+         */
         if (Boolean.FALSE.equals(transporte.getDisponible())
                 && !idPesaje.equals(transporte.getPesajeAsociado())) {
             throw new RuntimeException("El transporte no está disponible");
@@ -62,6 +70,11 @@ public class ParcialidadService {
         Transportista transportista = transportistaRepository.findById(parcialidad.getIdTransportista())
                 .orElseThrow(() -> new RuntimeException("Transportista no encontrado"));
 
+        /*
+         * Regla de negocio:
+         * Si el transportista no está disponible y está asociado a otro pesaje,
+         * no se puede usar.
+         */
         if (Boolean.FALSE.equals(transportista.getDisponible())
                 && !idPesaje.equals(transportista.getPesajeAsociado())) {
             throw new RuntimeException("El transportista no está disponible");
@@ -71,8 +84,20 @@ public class ParcialidadService {
         Double pesoConvertido = parcialidad.getPesoActual() * factor;
 
         Double pesoActualRegistrado = parcialidadRepository.sumarPesoPorPesaje(idPesaje);
+        if (pesoActualRegistrado == null) {
+            pesoActualRegistrado = 0.0;
+        }
+
         Double nuevoTotal = pesoActualRegistrado + pesoConvertido;
 
+        /*
+         * Regla correcta:
+         * Se permite hasta +5% del peso total acordado.
+         *
+         * Ejemplo:
+         * Peso acordado: 500
+         * Máximo permitido: 525
+         */
         Double maximoPermitido = pesaje.getPesoTotalActual() * 1.05;
 
         if (nuevoTotal > maximoPermitido) {
@@ -102,6 +127,10 @@ public class ParcialidadService {
 
         pesajeRepository.save(pesaje);
 
+        /*
+         * Aquí se envía la parcialidad al micro Beneficio.
+         * Beneficio la recibe como PENDIENTE_RECEPCION.
+         */
         registrarParcialidadEnBeneficio(
                 guardada,
                 pesaje,
@@ -109,12 +138,24 @@ public class ParcialidadService {
                 transportista
         );
 
-        transporte.setDisponible(true);
-        transporte.setPesajeAsociado(null);
+        /*
+         * CORRECCIÓN IMPORTANTE:
+         * Antes aquí se liberaba el transporte y el transportista:
+         *
+         * transporte.setDisponible(true);
+         * transporte.setPesajeAsociado(null);
+         *
+         * Eso era incorrecto porque el transporte y el transportista siguen
+         * asociados al proceso hasta que la parcialidad sea recibida/procesada.
+         *
+         * Por eso ahora se dejan como no disponibles y asociados al pesaje.
+         */
+        transporte.setDisponible(false);
+        transporte.setPesajeAsociado(idPesaje);
         transporteRepository.save(transporte);
 
-        transportista.setDisponible(true);
-        transportista.setPesajeAsociado(null);
+        transportista.setDisponible(false);
+        transportista.setPesajeAsociado(idPesaje);
         transportistaRepository.save(transportista);
 
         return guardada;

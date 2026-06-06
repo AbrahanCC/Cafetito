@@ -20,19 +20,40 @@ public class ParcialidadBeneficioService {
     private final HistorialCuentaService historialService;
     private final BitacoraService bitacoraService;
 
+    private static final double PORCENTAJE_TOLERANCIA = 0.05;
+
+    private static final String CUENTA_CREADA = "CUENTA_CREADA";
+    private static final String CUENTA_ABIERTA = "CUENTA_ABIERTA";
+    private static final String PESAJE_INICIADO = "PESAJE_INICIADO";
+    private static final String PESAJE_FINALIZADO = "PESAJE_FINALIZADO";
+    private static final String CUENTA_CERRADA = "CUENTA_CERRADA";
+    private static final String CUENTA_CONFIRMADA = "CUENTA_CONFIRMADA";
+
+    private static final String PENDIENTE_RECEPCION = "PENDIENTE_RECEPCION";
+    private static final String RECIBIDA = "RECIBIDA";
+    private static final String RECHAZADA = "RECHAZADA";
+    private static final String PESAJE_REALIZADO = "PESAJE_REALIZADO";
+
     public List<ParcialidadBeneficio> listarPorCuenta(Long idCuenta) {
         return parcialidadRepository.findByCuenta_IdCuenta(idCuenta);
     }
 
     public List<ParcialidadBeneficio> listarPendientesPesoCabal() {
+        /*
+         * Peso Cabal solo debe ver parcialidades que ya fueron recibidas por Beneficio.
+         * La cuenta puede estar abierta o con pesaje iniciado.
+         */
         return parcialidadRepository.findByEstadoAndCuenta_EstadoIn(
-                "RECIBIDA",
-                List.of("PESAJE_INICIADO", "PESAJE_FINALIZADO")
+                RECIBIDA,
+                List.of(
+                        CUENTA_ABIERTA,
+                        PESAJE_INICIADO
+                )
         );
     }
 
     public List<ParcialidadBeneficio> listarPesadas() {
-        return parcialidadRepository.findByEstado("PESAJE_REALIZADO");
+        return parcialidadRepository.findByEstado(PESAJE_REALIZADO);
     }
 
     public List<ParcialidadBeneficio> listarConBoleta() {
@@ -44,6 +65,7 @@ public class ParcialidadBeneficioService {
             ParcialidadBeneficio parcialidad,
             String usuario
     ) {
+
         if (parcialidad.getCuenta() == null || parcialidad.getCuenta().getIdCuenta() == null) {
             throw new RuntimeException("La parcialidad debe estar asociada a una cuenta");
         }
@@ -61,13 +83,14 @@ public class ParcialidadBeneficioService {
         Cuenta cuenta = cuentaRepository.findById(parcialidad.getCuenta().getIdCuenta())
                 .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        validarCuenta(cuenta);
+        validarCuentaParaRegistrarParcialidad(cuenta);
+        recalcularTolerancia(cuenta);
         validarTransporte(parcialidad);
         validarTransportista(parcialidad);
 
         parcialidad.setIdParcialidadBeneficio(null);
         parcialidad.setCuenta(cuenta);
-        parcialidad.setEstado("PENDIENTE_RECEPCION");
+        parcialidad.setEstado(PENDIENTE_RECEPCION);
         parcialidad.setDetalle("Pendiente recepción en beneficio");
         parcialidad.setFechaRecepcionParcialidad(null);
         parcialidad.setPesoBascula(null);
@@ -93,8 +116,13 @@ public class ParcialidadBeneficioService {
             Long idParcialidad,
             String usuario
     ) {
+
         ParcialidadBeneficio parcialidad = parcialidadRepository.findById(idParcialidad)
                 .orElseThrow(() -> new RuntimeException("Parcialidad no encontrada"));
+
+        if (!PENDIENTE_RECEPCION.equals(parcialidad.getEstado())) {
+            throw new RuntimeException("La parcialidad no está pendiente de recepción");
+        }
 
         if (parcialidad.getFechaRecepcionParcialidad() != null) {
             throw new RuntimeException("La parcialidad ya fue procesada");
@@ -103,40 +131,56 @@ public class ParcialidadBeneficioService {
         Cuenta cuenta = cuentaRepository.findById(parcialidad.getCuenta().getIdCuenta())
                 .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        validarCuenta(cuenta);
+        validarCuentaParaRecibir(cuenta);
+        recalcularTolerancia(cuenta);
         validarTransporte(parcialidad);
         validarTransportista(parcialidad);
 
-        Double nuevoAcumulado = cuenta.getPesoAcumulado() + parcialidad.getPesoEnviado();
-        Double maximo = cuenta.getPesoObjetivo() + cuenta.getTolerancia();
+        Double pesoObjetivo = obtenerValor(cuenta.getPesoObjetivo());
+        Double pesoActual = obtenerValor(cuenta.getPesoAcumulado());
+        Double pesoEnviado = obtenerValor(parcialidad.getPesoEnviado());
+        Double tolerancia = calcularToleranciaPermitida(pesoObjetivo);
 
-        if (nuevoAcumulado > maximo) {
-            parcialidad.setEstado("RECHAZADA");
+        Double nuevoAcumulado = pesoActual + pesoEnviado;
+        Double maximoPermitido = pesoObjetivo + tolerancia;
+
+        /*
+         * Beneficio no recibe parcialidades que superen el +5%
+         * del peso acordado.
+         */
+        if (nuevoAcumulado > maximoPermitido) {
+            parcialidad.setEstado(RECHAZADA);
             parcialidad.setDetalle("Excede peso permitido");
             parcialidad.setFechaRecepcionParcialidad(LocalDateTime.now());
             parcialidadRepository.save(parcialidad);
 
-            throw new RuntimeException("La parcialidad excede el peso permitido");
+            throw new RuntimeException("La parcialidad excede el peso permitido de +5%");
         }
 
-        parcialidad.setEstado("RECIBIDA");
+        parcialidad.setEstado(RECIBIDA);
         parcialidad.setDetalle("Espera de ingreso");
         parcialidad.setFechaRecepcionParcialidad(LocalDateTime.now());
 
         ParcialidadBeneficio actualizada = parcialidadRepository.save(parcialidad);
 
         cuenta.setPesoAcumulado(nuevoAcumulado);
-        cuenta.setSaldoPendiente(cuenta.getPesoObjetivo() - nuevoAcumulado);
-        cuenta.setCantidadParcialidades(cuenta.getCantidadParcialidades() + 1);
+        cuenta.setSaldoPendiente(pesoObjetivo - nuevoAcumulado);
+        cuenta.setCantidadParcialidades(obtenerEntero(cuenta.getCantidadParcialidades()) + 1);
+        cuenta.setDiferenciaTotal(nuevoAcumulado - pesoObjetivo);
+        cuenta.setTolerancia(tolerancia);
 
-        Double diferenciaFinal = nuevoAcumulado - cuenta.getPesoObjetivo();
-        cuenta.setDiferenciaTotal(diferenciaFinal);
-
-        if (Math.abs(diferenciaFinal) <= cuenta.getTolerancia()) {
-            cuenta.setEstado("PESAJE_FINALIZADO");
-            cuenta.setResultadoTolerancia("ACEPTADO_EN_PARAMETRO");
-        } else if ("CUENTA_CREADA".equals(cuenta.getEstado())) {
-            cuenta.setEstado("PESAJE_INICIADO");
+        /*
+         * Regla:
+         * Cuenta Abierta se coloca cuando ingresa el primer cargamento.
+         * Aquí Beneficio ya recibió la parcialidad.
+         *
+         * NO se finaliza aquí.
+         * PESAJE_FINALIZADO se coloca hasta que Peso Cabal registre el peso
+         * y el total de báscula esté dentro de +-5%.
+         */
+        if (CUENTA_CREADA.equals(cuenta.getEstado())
+                || CUENTA_ABIERTA.equals(cuenta.getEstado())) {
+            cuenta.setEstado(CUENTA_ABIERTA);
         }
 
         Cuenta cuentaActualizada = cuentaRepository.saveAndFlush(cuenta);
@@ -163,14 +207,19 @@ public class ParcialidadBeneficioService {
             Long idParcialidad,
             String usuario
     ) {
+
         ParcialidadBeneficio parcialidad = parcialidadRepository.findById(idParcialidad)
                 .orElseThrow(() -> new RuntimeException("Parcialidad no encontrada"));
+
+        if (!PENDIENTE_RECEPCION.equals(parcialidad.getEstado())) {
+            throw new RuntimeException("Solo se puede rechazar una parcialidad pendiente de recepción");
+        }
 
         if (parcialidad.getFechaRecepcionParcialidad() != null) {
             throw new RuntimeException("La parcialidad ya fue procesada");
         }
 
-        parcialidad.setEstado("RECHAZADA");
+        parcialidad.setEstado(RECHAZADA);
         parcialidad.setDetalle("Rechazado");
         parcialidad.setFechaRecepcionParcialidad(LocalDateTime.now());
 
@@ -194,10 +243,11 @@ public class ParcialidadBeneficioService {
             String observaciones,
             String usuario
     ) {
+
         ParcialidadBeneficio parcialidad = parcialidadRepository.findById(idParcialidad)
                 .orElseThrow(() -> new RuntimeException("Parcialidad no encontrada"));
 
-        if (!"RECIBIDA".equals(parcialidad.getEstado())) {
+        if (!RECIBIDA.equals(parcialidad.getEstado())) {
             throw new RuntimeException("La parcialidad no se encuentra disponible para pesaje");
         }
 
@@ -209,32 +259,74 @@ public class ParcialidadBeneficioService {
             throw new RuntimeException("El peso báscula debe ser mayor a 0");
         }
 
-        Cuenta cuenta = parcialidad.getCuenta();
+        Cuenta cuenta = cuentaRepository.findById(parcialidad.getCuenta().getIdCuenta())
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        Double diferenciaPeso = pesoBascula - parcialidad.getPesoEnviado();
+        validarCuentaParaPesoCabal(cuenta);
+        recalcularTolerancia(cuenta);
+
+        Double diferenciaPeso = pesoBascula - obtenerValor(parcialidad.getPesoEnviado());
 
         parcialidad.setPesoBascula(pesoBascula);
         parcialidad.setDiferenciaPeso(diferenciaPeso);
         parcialidad.setTipoMedida(tipoMedida);
         parcialidad.setObservaciones(observaciones);
-        parcialidad.setEstado("PESAJE_REALIZADO");
+        parcialidad.setEstado(PESAJE_REALIZADO);
         parcialidad.setDetalle("Pesaje Realizado");
         parcialidad.setFechaPesoBascula(LocalDateTime.now());
 
         ParcialidadBeneficio actualizada = parcialidadRepository.save(parcialidad);
 
-        Double total = cuenta.getPesoBasculaTotal() == null
-                ? 0.0
-                : cuenta.getPesoBasculaTotal();
+        Double pesoObjetivo = obtenerValor(cuenta.getPesoObjetivo());
+        Double pesoBasculaActual = obtenerValor(cuenta.getPesoBasculaTotal());
+        Double nuevoPesoBasculaTotal = pesoBasculaActual + pesoBascula;
+        Double tolerancia = calcularToleranciaPermitida(pesoObjetivo);
+        Double diferenciaTotal = nuevoPesoBasculaTotal - pesoObjetivo;
 
-        cuenta.setPesoBasculaTotal(total + pesoBascula);
+        cuenta.setPesoBasculaTotal(nuevoPesoBasculaTotal);
+        cuenta.setTolerancia(tolerancia);
+        cuenta.setDiferenciaTotal(diferenciaTotal);
 
-        cuentaRepository.saveAndFlush(cuenta);
+        /*
+         * Regla:
+         * Pesaje Iniciado se coloca cuando se recibe el primer peso de báscula.
+         */
+        cuenta.setEstado(PESAJE_INICIADO);
+        cuenta.setResultadoTolerancia(null);
+
+        /*
+         * Regla:
+         * Pesaje Finalizado se coloca cuando se recibe el último peso
+         * y el total queda dentro del rango permitido de +-5%.
+         *
+         * Si queda faltante, sigue PESAJE_INICIADO.
+         * Si queda sobrante fuera de tolerancia, se marca PESAJE_FINALIZADO
+         * con resultado SOBRANTE para que no pueda confirmarse.
+         */
+        if (Math.abs(diferenciaTotal) <= tolerancia) {
+            cuenta.setEstado(PESAJE_FINALIZADO);
+            cuenta.setResultadoTolerancia("ACEPTADO_EN_PARAMETRO");
+        } else if (diferenciaTotal > tolerancia) {
+            cuenta.setEstado(PESAJE_FINALIZADO);
+            cuenta.setResultadoTolerancia("SOBRANTE");
+        } else {
+            cuenta.setEstado(PESAJE_INICIADO);
+            cuenta.setResultadoTolerancia("FALTANTE");
+        }
+
+        Cuenta cuentaActualizada = cuentaRepository.saveAndFlush(cuenta);
+
+        historialService.registrarCambio(
+                cuentaActualizada,
+                cuentaActualizada.getEstado(),
+                cuentaActualizada.getDiferenciaTotal(),
+                cuentaActualizada.getTolerancia()
+        );
 
         bitacoraService.registrarOperacion(
                 "ACTUALIZAR_PESO_BASCULA",
                 usuario,
-                cuenta.getIdCuenta(),
+                cuentaActualizada.getIdCuenta(),
                 "Peso cabal parcialidad " + idParcialidad
         );
 
@@ -246,11 +338,16 @@ public class ParcialidadBeneficioService {
             Long idParcialidad,
             String usuario
     ) {
+
         ParcialidadBeneficio parcialidad = parcialidadRepository.findById(idParcialidad)
                 .orElseThrow(() -> new RuntimeException("Parcialidad no encontrada"));
 
-        if (!"PESAJE_REALIZADO".equals(parcialidad.getEstado())) {
+        if (!PESAJE_REALIZADO.equals(parcialidad.getEstado())) {
             throw new RuntimeException("No se puede generar boleta sin pesaje");
+        }
+
+        if (parcialidad.getPesoBascula() == null) {
+            throw new RuntimeException("No se puede generar boleta sin peso báscula");
         }
 
         if (Boolean.TRUE.equals(parcialidad.getBoleta())) {
@@ -273,17 +370,46 @@ public class ParcialidadBeneficioService {
         return actualizada;
     }
 
-    private void validarCuenta(Cuenta cuenta) {
-        if ("CUENTA_CERRADA".equals(cuenta.getEstado())) {
+    private void validarCuentaParaRegistrarParcialidad(Cuenta cuenta) {
+        if (CUENTA_CERRADA.equals(cuenta.getEstado())) {
             throw new RuntimeException("Cuenta cerrada");
         }
 
-        if ("CUENTA_CONFIRMADA".equals(cuenta.getEstado())) {
+        if (CUENTA_CONFIRMADA.equals(cuenta.getEstado())) {
             throw new RuntimeException("Cuenta confirmada");
         }
 
-        if ("PESAJE_FINALIZADO".equals(cuenta.getEstado())) {
+        if (PESAJE_FINALIZADO.equals(cuenta.getEstado())) {
             throw new RuntimeException("Cuenta ya finalizada");
+        }
+    }
+
+    private void validarCuentaParaRecibir(Cuenta cuenta) {
+        if (CUENTA_CERRADA.equals(cuenta.getEstado())) {
+            throw new RuntimeException("Cuenta cerrada");
+        }
+
+        if (CUENTA_CONFIRMADA.equals(cuenta.getEstado())) {
+            throw new RuntimeException("Cuenta confirmada");
+        }
+
+        if (PESAJE_FINALIZADO.equals(cuenta.getEstado())) {
+            throw new RuntimeException("Cuenta ya finalizada");
+        }
+    }
+
+    private void validarCuentaParaPesoCabal(Cuenta cuenta) {
+        if (CUENTA_CERRADA.equals(cuenta.getEstado())) {
+            throw new RuntimeException("Cuenta cerrada");
+        }
+
+        if (CUENTA_CONFIRMADA.equals(cuenta.getEstado())) {
+            throw new RuntimeException("Cuenta confirmada");
+        }
+
+        if (!CUENTA_ABIERTA.equals(cuenta.getEstado())
+                && !PESAJE_INICIADO.equals(cuenta.getEstado())) {
+            throw new RuntimeException("La cuenta no está disponible para pesaje de báscula");
         }
     }
 
@@ -297,5 +423,27 @@ public class ParcialidadBeneficioService {
         if (parcialidad.getEstadoTransportista() == null || parcialidad.getEstadoTransportista() != 1) {
             throw new RuntimeException("Transportista bloqueado");
         }
+    }
+
+    private void recalcularTolerancia(Cuenta cuenta) {
+        cuenta.setTolerancia(
+                calcularToleranciaPermitida(cuenta.getPesoObjetivo())
+        );
+    }
+
+    private Double calcularToleranciaPermitida(Double pesoObjetivo) {
+        if (pesoObjetivo == null || pesoObjetivo <= 0) {
+            return 0.0;
+        }
+
+        return pesoObjetivo * PORCENTAJE_TOLERANCIA;
+    }
+
+    private Double obtenerValor(Double valor) {
+        return valor == null ? 0.0 : valor;
+    }
+
+    private Integer obtenerEntero(Integer valor) {
+        return valor == null ? 0 : valor;
     }
 }

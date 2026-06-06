@@ -1,6 +1,7 @@
 import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { debounceTime, distinctUntilChanged } from 'rxjs';
 import QRCode from 'qrcode';
 
 import { BeneficioService } from '../../../core/services/beneficio';
@@ -32,6 +33,10 @@ export class CuentasBeneficioComponent implements OnInit {
   loadingParcialidades = false;
   procesandoCuenta = false;
   procesandoParcialidad = false;
+
+  buscandoAgricultor = false;
+  agricultorEncontrado: any = null;
+  errorAgricultor = '';
 
   error = '';
   mensaje = '';
@@ -68,6 +73,7 @@ export class CuentasBeneficioComponent implements OnInit {
 
   ngOnInit(): void {
     this.cargarCuentas();
+    this.escucharCambioAgricultor();
 
     this.route.queryParams.subscribe(params => {
       const vista = params['vista'];
@@ -77,6 +83,48 @@ export class CuentasBeneficioComponent implements OnInit {
 
       if (vista === 'DETALLE_PARCIALIDAD' && idCuenta && idParcialidad) {
         this.abrirDesdeQr(idCuenta, idParcialidad, paso === '17');
+      }
+    });
+  }
+
+  escucharCambioAgricultor(): void {
+    this.form.get('nitAgricultor')?.valueChanges
+      .pipe(
+        debounceTime(450),
+        distinctUntilChanged()
+      )
+      .subscribe(valor => {
+        const idAgricultor = Number(valor);
+
+        this.agricultorEncontrado = null;
+        this.errorAgricultor = '';
+
+        if (!idAgricultor || idAgricultor <= 0) {
+          this.cdr.detectChanges();
+          return;
+        }
+
+        this.buscarAgricultorPorId(idAgricultor);
+      });
+  }
+
+  buscarAgricultorPorId(idAgricultor: number): void {
+    this.buscandoAgricultor = true;
+    this.errorAgricultor = '';
+    this.agricultorEncontrado = null;
+
+    this.beneficioService.obtenerDetalleAgricultor(idAgricultor).subscribe({
+      next: data => {
+        this.buscandoAgricultor = false;
+        this.agricultorEncontrado = data;
+        this.errorAgricultor = '';
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.buscandoAgricultor = false;
+        this.agricultorEncontrado = null;
+        this.errorAgricultor = 'No se encontró agricultor con ese ID.';
+        this.cdr.detectChanges();
       }
     });
   }
@@ -146,6 +194,8 @@ export class CuentasBeneficioComponent implements OnInit {
     this.showCambioEstado = false;
     this.error = '';
     this.mensaje = '';
+    this.errorAgricultor = '';
+    this.agricultorEncontrado = null;
     this.form.reset();
   }
 
@@ -156,6 +206,11 @@ export class CuentasBeneficioComponent implements OnInit {
 
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      return;
+    }
+
+    if (!this.agricultorEncontrado) {
+      this.error = 'Debe ingresar un ID de agricultor válido antes de crear la cuenta.';
       return;
     }
 
@@ -173,6 +228,8 @@ export class CuentasBeneficioComponent implements OnInit {
         this.procesandoCuenta = false;
         this.mensaje = 'Cuenta creada correctamente.';
         this.showForm = false;
+        this.agricultorEncontrado = null;
+        this.errorAgricultor = '';
         this.form.reset();
         this.cargarCuentas();
       },
@@ -190,6 +247,8 @@ export class CuentasBeneficioComponent implements OnInit {
     }
 
     this.showForm = false;
+    this.agricultorEncontrado = null;
+    this.errorAgricultor = '';
     this.form.reset();
   }
 
@@ -552,10 +611,20 @@ export class CuentasBeneficioComponent implements OnInit {
     return p?.estadoTransportista || '-';
   }
 
+  obtenerNombreAgricultorCuenta(cuenta: any): string {
+    return cuenta?.nombreAgricultor ||
+           cuenta?.agricultorNombre ||
+           cuenta?.nombre ||
+           '-';
+  }
+
   obtenerBadgeEstadoCuenta(estado?: string): string {
     switch (estado) {
       case 'CUENTA_CREADA':
         return 'bg-primary';
+
+      case 'CUENTA_ABIERTA':
+        return 'bg-info';
 
       case 'PESAJE_INICIADO':
         return 'bg-info';

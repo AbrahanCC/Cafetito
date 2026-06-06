@@ -18,9 +18,20 @@ public class CuentaService {
     private final HistorialCuentaService historialService;
     private final BitacoraService bitacoraService;
 
-    private static final double TOLERANCIA_DEFAULT = 5.0;
+    /*
+     * Regla correcta:
+     * La tolerancia NO es 5 fijo.
+     * La tolerancia es +-5% del peso objetivo de la cuenta.
+     *
+     * Ejemplo:
+     * Peso objetivo: 500
+     * Tolerancia permitida: 500 * 0.05 = 25
+     * Rango válido: 475 a 525
+     */
+    private static final double PORCENTAJE_TOLERANCIA = 0.05;
 
     private static final String CUENTA_CREADA = "CUENTA_CREADA";
+    private static final String CUENTA_ABIERTA = "CUENTA_ABIERTA";
     private static final String PESAJE_INICIADO = "PESAJE_INICIADO";
     private static final String PESAJE_FINALIZADO = "PESAJE_FINALIZADO";
     private static final String CUENTA_CERRADA = "CUENTA_CERRADA";
@@ -45,9 +56,11 @@ public class CuentaService {
     public List<Cuenta> listarCuentasParaPesoCabal() {
         return cuentaRepository.findByEstadoIn(
                 List.of(
-                        CUENTA_CONFIRMADA,
+                        CUENTA_ABIERTA,
                         PESAJE_INICIADO,
-                        PESAJE_FINALIZADO
+                        PESAJE_FINALIZADO,
+                        CUENTA_CERRADA,
+                        CUENTA_CONFIRMADA
                 )
         );
     }
@@ -73,6 +86,9 @@ public class CuentaService {
             throw new RuntimeException("Peso objetivo inválido");
         }
 
+        Double toleranciaCalculada =
+                calcularToleranciaPermitida(cuenta.getPesoObjetivo());
+
         cuenta.setFechaEnvio(LocalDateTime.now());
         cuenta.setEstado(CUENTA_CREADA);
 
@@ -81,7 +97,12 @@ public class CuentaService {
         cuenta.setSaldoPendiente(cuenta.getPesoObjetivo());
         cuenta.setCantidadParcialidades(0);
         cuenta.setDiferenciaTotal(0.0);
-        cuenta.setTolerancia(TOLERANCIA_DEFAULT);
+
+        /*
+         * Aquí guardamos el valor real permitido.
+         * Si pesoObjetivo = 500, tolerancia = 25.
+         */
+        cuenta.setTolerancia(toleranciaCalculada);
         cuenta.setResultadoTolerancia(null);
 
         Cuenta guardada = cuentaRepository.save(cuenta);
@@ -97,7 +118,7 @@ public class CuentaService {
                 "CREAR_CUENTA",
                 usuario,
                 guardada.getIdCuenta(),
-                "Cuenta creada"
+                "Cuenta creada con tolerancia del 5%"
         );
 
         return guardada;
@@ -109,20 +130,43 @@ public class CuentaService {
         Cuenta existente = cuentaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
+        /*
+         * Regla de negocio:
+         * Solo se puede editar una cuenta cuando todavía está creada.
+         */
+        if (!CUENTA_CREADA.equals(existente.getEstado())) {
+            throw new RuntimeException(
+                    "Solo se puede editar una cuenta en estado Cuenta Creada"
+            );
+        }
+
+        if (cuenta.getIdAgricultor() == null) {
+            throw new RuntimeException("Debe indicar el agricultor");
+        }
+
+        if (cuenta.getPesoObjetivo() == null || cuenta.getPesoObjetivo() <= 0) {
+            throw new RuntimeException("Peso objetivo inválido");
+        }
+
         existente.setIdAgricultor(cuenta.getIdAgricultor());
         existente.setPesoObjetivo(cuenta.getPesoObjetivo());
 
-        if (cuenta.getCantidadParcialidades() != null) {
-            existente.setCantidadParcialidades(cuenta.getCantidadParcialidades());
-        }
+        /*
+         * Si cambia el peso objetivo, también cambia la tolerancia.
+         */
+        existente.setTolerancia(
+                calcularToleranciaPermitida(existente.getPesoObjetivo())
+        );
 
-        if (cuenta.getPesoAcumulado() != null) {
-            existente.setPesoAcumulado(cuenta.getPesoAcumulado());
-        }
+        existente.setSaldoPendiente(
+                existente.getPesoObjetivo()
+                        - obtenerValor(existente.getPesoAcumulado())
+        );
 
-        if (cuenta.getPesoBasculaTotal() != null) {
-            existente.setPesoBasculaTotal(cuenta.getPesoBasculaTotal());
-        }
+        existente.setDiferenciaTotal(
+                obtenerValor(existente.getPesoAcumulado())
+                        - existente.getPesoObjetivo()
+        );
 
         Cuenta actualizada = cuentaRepository.save(existente);
 
@@ -130,7 +174,7 @@ public class CuentaService {
                 "ACTUALIZAR_CUENTA",
                 usuario,
                 actualizada.getIdCuenta(),
-                "Cuenta actualizada"
+                "Cuenta actualizada en estado Cuenta Creada"
         );
 
         return actualizada;
@@ -151,36 +195,50 @@ public class CuentaService {
             throw new RuntimeException("Debe indicar el nuevo estado");
         }
 
-        if (!PESAJE_FINALIZADO.equals(cuenta.getEstado())
-                && !CUENTA_CERRADA.equals(cuenta.getEstado())) {
-
-            throw new RuntimeException(
-                    "Solo se puede cambiar estado si la cuenta está en Pesaje Finalizado o Cuenta Cerrada"
-            );
-        }
-
         if (nuevoEstado.equals(cuenta.getEstado())) {
             throw new RuntimeException("El nuevo estado no puede ser igual al estado actual");
         }
 
-        if (!CUENTA_CERRADA.equals(nuevoEstado)
-                && !CUENTA_CONFIRMADA.equals(nuevoEstado)) {
-
-            throw new RuntimeException("Estado nuevo no permitido");
-        }
-
-        cuenta.setEstado(nuevoEstado);
-
+        /*
+         * Flujo permitido:
+         * PESAJE_FINALIZADO -> CUENTA_CERRADA
+         * CUENTA_CERRADA -> CUENTA_CONFIRMADA
+         */
         if (CUENTA_CERRADA.equals(nuevoEstado)) {
-            cuenta.setFechaLlegada(LocalDateTime.now());
-        }
 
-        if (CUENTA_CONFIRMADA.equals(nuevoEstado)) {
+            if (!PESAJE_FINALIZADO.equals(cuenta.getEstado())) {
+                throw new RuntimeException(
+                        "Solo se puede cerrar una cuenta en estado Pesaje Finalizado"
+                );
+            }
+
+            cuenta.setEstado(CUENTA_CERRADA);
+            cuenta.setFechaLlegada(LocalDateTime.now());
+
+        } else if (CUENTA_CONFIRMADA.equals(nuevoEstado)) {
+
+            if (!CUENTA_CERRADA.equals(cuenta.getEstado())) {
+                throw new RuntimeException(
+                        "Solo se puede confirmar una cuenta en estado Cuenta Cerrada"
+                );
+            }
+
             actualizarResultadoTolerancia(cuenta);
+
+            /*
+             * Regla de negocio:
+             * Cuenta Confirmada solo si los pesos coinciden o están dentro de +-5%.
+             */
+            if (!"ACEPTADO_EN_PARAMETRO".equals(cuenta.getResultadoTolerancia())) {
+                throw new RuntimeException(
+                        "No se puede confirmar la cuenta porque está fuera de la tolerancia permitida de +-5%"
+                );
+            }
+
+            cuenta.setEstado(CUENTA_CONFIRMADA);
+
         } else {
-            cuenta.setDiferenciaTotal(
-                    diferenciaTotal != null ? diferenciaTotal : cuenta.getDiferenciaTotal()
-            );
+            throw new RuntimeException("Estado nuevo no permitido");
         }
 
         Cuenta actualizada = cuentaRepository.save(cuenta);
@@ -205,27 +263,33 @@ public class CuentaService {
     @Transactional
     public Cuenta marcarPesajeIniciado(Long idCuenta, String usuario) {
 
-        Cuenta cuenta =
-                cuentaRepository.findById(idCuenta)
-                        .orElseThrow(() ->
-                                new RuntimeException("Cuenta no encontrada")
-                        );
+        Cuenta cuenta = cuentaRepository.findById(idCuenta)
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        if ("CUENTA_CERRADA".equals(cuenta.getEstado())
-                || "CUENTA_CONFIRMADA".equals(cuenta.getEstado())
-                || "PESAJE_FINALIZADO".equals(cuenta.getEstado())) {
+        if (CUENTA_CERRADA.equals(cuenta.getEstado())
+                || CUENTA_CONFIRMADA.equals(cuenta.getEstado())
+                || PESAJE_FINALIZADO.equals(cuenta.getEstado())) {
 
-            throw new RuntimeException(
-                    "La cuenta no admite nuevos pesajes"
-            );
+            throw new RuntimeException("La cuenta no admite nuevos pesajes");
         }
 
-        if ("CUENTA_CREADA".equals(cuenta.getEstado())) {
+        cuenta.setTolerancia(
+                calcularToleranciaPermitida(cuenta.getPesoObjetivo())
+        );
 
-            cuenta.setEstado("PESAJE_INICIADO");
+        /*
+         * Conservamos el nombre del método porque ya lo consume el micro Agricultor,
+         * pero alineamos el estado con la regla de negocio:
+         *
+         * CUENTA_CREADA -> CUENTA_ABIERTA
+         *
+         * Cuenta Abierta representa que la cuenta ya puede recibir cargamentos.
+         */
+        if (CUENTA_CREADA.equals(cuenta.getEstado())) {
 
-            Cuenta actualizada =
-                    cuentaRepository.save(cuenta);
+            cuenta.setEstado(CUENTA_ABIERTA);
+
+            Cuenta actualizada = cuentaRepository.save(cuenta);
 
             historialService.registrarCambio(
                     actualizada,
@@ -235,10 +299,10 @@ public class CuentaService {
             );
 
             bitacoraService.registrarOperacion(
-                    "INICIAR_PESAJE_CUENTA",
+                    "ABRIR_CUENTA",
                     usuario,
                     actualizada.getIdCuenta(),
-                    "Cuenta marcada como pesaje iniciado"
+                    "Cuenta abierta para recibir cargamentos"
             );
 
             return actualizada;
@@ -250,23 +314,42 @@ public class CuentaService {
     @Transactional
     public Cuenta marcarPesajeFinalizado(Long idCuenta, String usuario) {
 
-        Cuenta cuenta =
-                cuentaRepository.findById(idCuenta)
-                        .orElseThrow(() ->
-                                new RuntimeException("Cuenta no encontrada")
-                        );
+        Cuenta cuenta = cuentaRepository.findById(idCuenta)
+                .orElseThrow(() -> new RuntimeException("Cuenta no encontrada"));
 
-        if (!"PESAJE_INICIADO".equals(cuenta.getEstado())) {
+        if (!CUENTA_ABIERTA.equals(cuenta.getEstado())
+                && !PESAJE_INICIADO.equals(cuenta.getEstado())) {
 
             throw new RuntimeException(
-                    "Solo se puede finalizar una cuenta en pesaje iniciado"
+                    "Solo se puede finalizar una cuenta abierta o con pesaje iniciado"
             );
         }
 
-        cuenta.setEstado("PESAJE_FINALIZADO");
+        cuenta.setTolerancia(
+                calcularToleranciaPermitida(cuenta.getPesoObjetivo())
+        );
 
-        Cuenta actualizada =
-                cuentaRepository.save(cuenta);
+        /*
+         * No se permite finalizar si el peso acumulado recibido todavía
+         * no está completo dentro del rango de +-5%.
+         */
+        Double pesoObjetivo = obtenerValor(cuenta.getPesoObjetivo());
+        Double pesoAcumulado = obtenerValor(cuenta.getPesoAcumulado());
+        Double toleranciaPermitida = calcularToleranciaPermitida(pesoObjetivo);
+
+        Double diferencia = pesoAcumulado - pesoObjetivo;
+
+        if (Math.abs(diferencia) > toleranciaPermitida) {
+            throw new RuntimeException(
+                    "No se puede finalizar el pesaje porque el peso recibido no está dentro de la tolerancia de +-5%"
+            );
+        }
+
+        cuenta.setEstado(PESAJE_FINALIZADO);
+        cuenta.setDiferenciaTotal(diferencia);
+        cuenta.setSaldoPendiente(pesoObjetivo - pesoAcumulado);
+
+        Cuenta actualizada = cuentaRepository.save(cuenta);
 
         historialService.registrarCambio(
                 actualizada,
@@ -287,32 +370,36 @@ public class CuentaService {
 
     private void actualizarResultadoTolerancia(Cuenta cuenta) {
 
-        Double pesoObjetivo =
-                cuenta.getPesoObjetivo() == null
-                        ? 0.0
-                        : cuenta.getPesoObjetivo();
+        Double pesoObjetivo = obtenerValor(cuenta.getPesoObjetivo());
+        Double pesoBascula = obtenerValor(cuenta.getPesoBasculaTotal());
 
-        Double pesoBascula =
-                cuenta.getPesoBasculaTotal() == null
-                        ? 0.0
-                        : cuenta.getPesoBasculaTotal();
+        Double toleranciaPermitida =
+                calcularToleranciaPermitida(pesoObjetivo);
 
-        Double tolerancia =
-                cuenta.getTolerancia() == null
-                        ? TOLERANCIA_DEFAULT
-                        : cuenta.getTolerancia();
+        Double diferencia = pesoBascula - pesoObjetivo;
 
-        Double diferencia =
-                pesoBascula - pesoObjetivo;
-
+        cuenta.setTolerancia(toleranciaPermitida);
         cuenta.setDiferenciaTotal(diferencia);
 
-        if (Math.abs(diferencia) <= tolerancia) {
+        if (Math.abs(diferencia) <= toleranciaPermitida) {
             cuenta.setResultadoTolerancia("ACEPTADO_EN_PARAMETRO");
         } else if (diferencia < 0) {
             cuenta.setResultadoTolerancia("FALTANTE");
         } else {
             cuenta.setResultadoTolerancia("SOBRANTE");
         }
+    }
+
+    private Double calcularToleranciaPermitida(Double totalParcialidad) {
+
+        if (totalParcialidad == null || totalParcialidad <= 0) {
+            return 0.0;
+        }
+
+        return totalParcialidad * PORCENTAJE_TOLERANCIA;
+    }
+
+    private Double obtenerValor(Double valor) {
+        return valor == null ? 0.0 : valor;
     }
 }
